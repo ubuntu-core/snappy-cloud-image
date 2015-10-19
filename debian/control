@@ -1,0 +1,27 @@
+Source: snappy-cloud-image
+Section: devel
+Priority: optional
+Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+Build-Depends: bzr,
+               debhelper (>= 9),
+               dh-golang,
+               git,
+               golang-check.v1-dev,
+               golang-go,
+               mercurial,
+Standards-Version: 3.9.6
+Homepage: https://launchpad.net/snappy-cloud-image
+#Vcs-Browser: http://bazaar.launchpad.net/~snappy-cloud-image/trunk/files
+#Vcs-Bzr: lp:snappy-cloud-image
+
+Package: snappy-cloud-image
+Architecture: any
+Depends: ${misc:Depends},
+         python-openstackclient,
+         ubuntu-device-flash,
+Description: utility to create and maintain snappy cloud images
+ It uses ubuntu-device-flash to create the images, then upload
+ it to the externally configured cloud (currently supports only
+ OpenStack).
+ There's also an option to maintain the images, removing stale
+ ones
