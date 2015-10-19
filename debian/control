@@ -11,8 +11,7 @@ Build-Depends: bzr,
                mercurial,
 Standards-Version: 3.9.6
 Homepage: https://launchpad.net/snappy-cloud-image
-#Vcs-Browser: http://bazaar.launchpad.net/~snappy-cloud-image/trunk/files
-#Vcs-Bzr: lp:snappy-cloud-image
+Vcs-Browser: https://git.launchpad.net/snappy-cloud-image
 
 Package: snappy-cloud-image
 Architecture: any
