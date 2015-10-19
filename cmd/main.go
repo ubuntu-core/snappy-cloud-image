@@ -22,8 +22,8 @@ package main
 import (
 	"log"
 
-	"launchpad.net/snappy-cloud-image/pkg/flags"
-	"launchpad.net/snappy-cloud-image/pkg/runner"
+	"github.com/fgimenez/snappy-cloud-image/pkg/flags"
+	"github.com/fgimenez/snappy-cloud-image/pkg/runner"
 )
 
 func main() {
