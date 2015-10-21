@@ -46,7 +46,7 @@ func (s *flagsSuite) TearDownTest(c *check.C) {
 func (s *flagsSuite) TestParseReturnsParsedFlags(c *check.C) {
 	parsedFlags := Parse()
 
-	c.Assert(parsedFlags, check.FitsTypeOf, &ParsedFlags{})
+	c.Assert(parsedFlags, check.FitsTypeOf, &Options{})
 }
 
 func (s *flagsSuite) TestParseDefaultAction(c *check.C) {

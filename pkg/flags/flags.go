@@ -22,8 +22,8 @@ package flags
 
 import "flag"
 
-// ParsedFlags has fields for the existing flags
-type ParsedFlags struct {
+// Options has fields for the existing flags
+type Options struct {
 	action, release, channel, arch string
 }
 
@@ -34,8 +34,8 @@ const (
 	defaultArch    = "amd64"
 )
 
-// Parse analyzes the flags and returns a ParsedFlag instance with the values
-func Parse() *ParsedFlags {
+// Parse analyzes the flags and returns a Options instance with the values
+func Parse() *Options {
 	var (
 		action  = flag.String("action", defaultAction, "action to be performed")
 		release = flag.String("release", defaultRelease, "release of the image to be created")
@@ -43,7 +43,7 @@ func Parse() *ParsedFlags {
 		arch    = flag.String("arch", defaultArch, "arch of the image to be created")
 	)
 	flag.Parse()
-	return &ParsedFlags{
+	return &Options{
 		action:  *action,
 		release: *release,
 		channel: *channel,
