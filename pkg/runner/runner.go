@@ -23,6 +23,6 @@ import "github.com/fgimenez/snappy-cloud-image/pkg/flags"
 
 // Exec is the main entry point, it interprets the given options and
 // handles the logic of the utility
-func Exec(flags *flags.ParsedFlags) (err error) {
+func Exec(options *flags.Options) (err error) {
 	return
 }
