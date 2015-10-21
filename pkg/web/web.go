@@ -30,7 +30,7 @@ var (
 
 // Getter has the generic Get method for retrieving the contents of an url
 type Getter interface {
-	Get(string) (content string, err error)
+	Get(string) (content []byte, err error)
 }
 
 // Client is the default web client
@@ -48,19 +48,18 @@ type ErrBodyRead struct {
 
 // Get retrieves the contents of the given url and return them as a string, with
 // the eventual errors in the process
-func (c *Client) Get(url string) (content string, err error) {
+func (c *Client) Get(url string) (content []byte, err error) {
 	resp, err := httpGet(url)
 	defer resp.Body.Close()
 	if err != nil {
-		return "", &ErrHTTPGet{msg: err.Error()}
+		return nil, &ErrHTTPGet{msg: err.Error()}
 	}
 
-	bcontent, err := ioutil.ReadAll(resp.Body)
+	content, err = ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return "", &ErrBodyRead{msg: err.Error()}
+		return nil, &ErrBodyRead{msg: err.Error()}
 	}
-
-	return string(bcontent), err
+	return
 }
 
 func (e *ErrHTTPGet) Error() string {

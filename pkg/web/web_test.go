@@ -30,11 +30,13 @@ import (
 const (
 	testURL        = "http://example.com"
 	httpErrMsg     = "http.Get failed"
-	responseString = "This is the response string"
 	bodyReadErrMsg = "read of resp.Body failed"
 )
 
-var _ = check.Suite(&webSuite{})
+var (
+	_        = check.Suite(&webSuite{})
+	response = []byte("This is the response string")
+)
 
 type fakeBody struct {
 	bytes.Buffer
@@ -108,12 +110,12 @@ func (s *webSuite) TestGetReturnsHttpGetErrors(c *check.C) {
 }
 
 func (s *webSuite) TestGetReturnsHttpGetBody(c *check.C) {
-	s.body.Write([]byte(responseString))
+	s.body.Write(response)
 
 	content, err := s.subject.Get(testURL)
 
 	c.Assert(err, check.IsNil)
-	c.Assert(content, check.Equals, responseString)
+	c.Assert(content, check.DeepEquals, response)
 }
 
 func (s *webSuite) TestGetReturnsBodyReadErrors(c *check.C) {
