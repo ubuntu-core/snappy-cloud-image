@@ -17,7 +17,12 @@
  *
  */
 
+// Package image knows how to crete the requested images using UDF.
+// It also defines the required interfaces standarize the query and creation
+// of images
 package image
+
+import "github.com/fgimenez/snappy-cloud-image/pkg/cli"
 
 // Pollster holds the methods for querying an image backend
 type Pollster interface {
@@ -28,4 +33,28 @@ type Pollster interface {
 type PollsterCreator interface {
 	Pollster
 	Create(filePath, release, channel, arch string, version int) (err error)
+}
+
+// Driver defines the methods required for creating images
+type Driver interface {
+	Create(release, channel, arch string) (path string, err error)
+}
+
+// UDF is a concrete implementation of Driver
+type UDF struct {
+	cli cli.Commander
+}
+
+// Create makes the required call to UDF to
+func (u *UDF) Create(release, channel, arch string) (path string, err error) {
+	tmpFileName, _ := u.cli.ExecCommand("mktemp")
+
+	var archFlag string
+	if arch == "arm" {
+		archFlag = "--oem beagleblack"
+	}
+	_, err = u.cli.ExecCommand("sudo", "ubuntu-device-flash", "core", release,
+		"--channel", channel, "--developer-mode", archFlag, "-o", tmpFileName)
+
+	return tmpFileName, err
 }
