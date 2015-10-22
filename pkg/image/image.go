@@ -18,3 +18,14 @@
  */
 
 package image
+
+// Pollster holds the methods for querying an image backend
+type Pollster interface {
+	GetLatestVersion(release, channel, arch string) (ver int, err error)
+}
+
+// PollsterCreator is a Pollster that can also create new images
+type PollsterCreator interface {
+	Pollster
+	Create(filePath, release, channel, arch string, version int) (err error)
+}
