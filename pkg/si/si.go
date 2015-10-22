@@ -32,11 +32,6 @@ const (
 	dataFileName = "index.json"
 )
 
-// Driver describes the methods to be implemented by the si clients
-type Driver interface {
-	GetLatestVersion(release, channel, arch string) (ver int, err error)
-}
-
 // Client is the default implementation of Driver
 type Client struct {
 	httpClient web.Getter
