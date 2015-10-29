@@ -59,7 +59,7 @@ func (f *fakeCliCommander) ExecCommand(cmds ...string) (output string, err error
 
 func (s *imageSuite) SetUpSuite(c *check.C) {
 	s.cli = &fakeCliCommander{}
-	s.subject = &UDF{cli: s.cli}
+	s.subject = NewUDF(s.cli)
 }
 
 func (s *imageSuite) SetUpTest(c *check.C) {

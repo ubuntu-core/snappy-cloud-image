@@ -43,6 +43,11 @@ type Client struct {
 	cli cli.Commander
 }
 
+// NewClient is the Client constructor
+func NewClient(cli cli.Commander) *Client {
+	return &Client{cli}
+}
+
 // ErrVersionNotFound is the type error returned when there are no images for a given
 // release, channel and arch
 type ErrVersionNotFound struct{ release, channel, arch string }

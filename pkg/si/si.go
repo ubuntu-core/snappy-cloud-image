@@ -37,6 +37,11 @@ type Client struct {
 	httpClient web.Getter
 }
 
+// NewClient is the Client constructor
+func NewClient(httpClient web.Getter) *Client {
+	return &Client{httpClient}
+}
+
 type response struct {
 	Global interface{}
 	Images images

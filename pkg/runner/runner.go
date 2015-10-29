@@ -19,7 +19,34 @@
 // Package runner handles the execution entry point
 package runner
 
-import "github.com/fgimenez/snappy-cloud-image/pkg/flags"
+import (
+	"fmt"
+
+	"github.com/fgimenez/snappy-cloud-image/pkg/flags"
+	"github.com/fgimenez/snappy-cloud-image/pkg/image"
+)
+
+// Runner is the main type of the package
+type Runner struct {
+	imgDataOrigin image.Pollster
+	imgDataTarget image.PollsterCreator
+	imgDriver     image.Driver
+}
+
+// NewRunner is the Runner constructor
+func NewRunner(imgDataOrigin image.Pollster, imgDataTarget image.PollsterCreator, imgDriver image.Driver) *Runner {
+	return &Runner{imgDataOrigin: imgDataOrigin, imgDataTarget: imgDataTarget, imgDriver: imgDriver}
+}
+
+// ErrVersion is the type of the error returned by Exec when the version
+// in SI is greater than or equal the version in cloud
+type ErrVersion struct {
+	siVersion, cloudVersion int
+}
+
+func (e *ErrVersion) Error() string {
+	return fmt.Sprintf("error SI version %d is lower than cloud version %d", e.siVersion, e.cloudVersion)
+}
 
 // Exec is the main entry point, it interprets the given options and
 // handles the logic of the utility
