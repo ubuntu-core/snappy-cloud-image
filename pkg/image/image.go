@@ -22,7 +22,14 @@
 // of images
 package image
 
-import "github.com/fgimenez/snappy-cloud-image/pkg/cli"
+import (
+	"path/filepath"
+	"strconv"
+
+	"github.com/fgimenez/snappy-cloud-image/pkg/cli"
+)
+
+const outputFileName = "udf.img"
 
 // Pollster holds the methods for querying an image backend
 type Pollster interface {
@@ -37,7 +44,7 @@ type PollsterCreator interface {
 
 // Driver defines the methods required for creating images
 type Driver interface {
-	Create(release, channel, arch string) (path string, err error)
+	Create(release, channel, arch string, ver int) (path string, err error)
 }
 
 // UDF is a concrete implementation of Driver
@@ -51,15 +58,17 @@ func NewUDF(cli cli.Commander) *UDF {
 }
 
 // Create makes the required call to UDF to
-func (u *UDF) Create(release, channel, arch string) (path string, err error) {
-	tmpFileName, _ := u.cli.ExecCommand("mktemp")
+func (u *UDF) Create(release, channel, arch string, ver int) (path string, err error) {
+	tmpDirName, _ := u.cli.ExecCommand("mktemp -d")
+	tmpFileName := filepath.Join(tmpDirName, outputFileName)
 
 	var archFlag string
 	if arch == "arm" {
 		archFlag = "--oem beagleblack"
 	}
 	_, err = u.cli.ExecCommand("sudo", "ubuntu-device-flash", "core", release,
-		"--channel", channel, "--developer-mode", archFlag, "-o", tmpFileName)
+		"--revision="+strconv.Itoa(ver), "--channel", channel, "--developer-mode",
+		archFlag, "-o", tmpFileName)
 
 	return tmpFileName, err
 }

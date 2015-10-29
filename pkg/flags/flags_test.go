@@ -52,53 +52,53 @@ func (s *flagsSuite) TestParseReturnsParsedFlags(c *check.C) {
 func (s *flagsSuite) TestParseDefaultAction(c *check.C) {
 	parsedFlags := Parse()
 
-	c.Assert(parsedFlags.action, check.Equals, defaultAction)
+	c.Assert(parsedFlags.Action, check.Equals, defaultAction)
 }
 
 func (s *flagsSuite) TestParseDefaultRelease(c *check.C) {
 	parsedFlags := Parse()
 
-	c.Assert(parsedFlags.release, check.Equals, defaultRelease)
+	c.Assert(parsedFlags.Release, check.Equals, defaultRelease)
 }
 
 func (s *flagsSuite) TestParseDefaultChannel(c *check.C) {
 	parsedFlags := Parse()
 
-	c.Assert(parsedFlags.channel, check.Equals, defaultChannel)
+	c.Assert(parsedFlags.Channel, check.Equals, defaultChannel)
 }
 
 func (s *flagsSuite) TestParseDefaultArch(c *check.C) {
 	parsedFlags := Parse()
 
-	c.Assert(parsedFlags.arch, check.Equals, defaultArch)
+	c.Assert(parsedFlags.Arch, check.Equals, defaultArch)
 }
 
 func (s *flagsSuite) TestParseSetsActionToFlagValue(c *check.C) {
 	os.Args = []string{"", "-action", "myaction"}
 	parsedFlags := Parse()
 
-	c.Assert(parsedFlags.action, check.Equals, "myaction")
+	c.Assert(parsedFlags.Action, check.Equals, "myaction")
 }
 
 func (s *flagsSuite) TestParseSetsReleaseToFlagValue(c *check.C) {
 	os.Args = []string{"", "-release", "myrelease"}
 	parsedFlags := Parse()
 
-	c.Assert(parsedFlags.release, check.Equals, "myrelease")
+	c.Assert(parsedFlags.Release, check.Equals, "myrelease")
 }
 
 func (s *flagsSuite) TestParseSetsChannelToFlagValue(c *check.C) {
 	os.Args = []string{"", "-channel", "mychannel"}
 	parsedFlags := Parse()
 
-	c.Assert(parsedFlags.channel, check.Equals, "mychannel")
+	c.Assert(parsedFlags.Channel, check.Equals, "mychannel")
 }
 
 func (s *flagsSuite) TestParseSetsArchToFlagValue(c *check.C) {
 	os.Args = []string{"", "-arch", "myarch"}
 	parsedFlags := Parse()
 
-	c.Assert(parsedFlags.arch, check.Equals, "myarch")
+	c.Assert(parsedFlags.Arch, check.Equals, "myarch")
 }
 
 // from flag.ResetForTesting

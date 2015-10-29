@@ -21,6 +21,7 @@ package image
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -31,7 +32,7 @@ const (
 	testDefaultRelease = "rolling"
 	testDefaultChannel = "edge"
 	testDefaultArch    = "amd64"
-	tmpFileName        = "tmpfilename"
+	tmpDirName         = "tmpdirname"
 )
 
 var _ = check.Suite(&imageSuite{})
@@ -69,23 +70,25 @@ func (s *imageSuite) SetUpTest(c *check.C) {
 }
 
 func (s *imageSuite) TestCreateCallsUDF(c *check.C) {
-	s.cli.output = tmpFileName
+	s.cli.output = tmpDirName
+	filename := tmpFileName()
 	testCases := []struct {
-		release, channel, arch, expectedCall string
+		release, channel, arch string
+		version                int
+		expectedCall           string
 	}{
-		{"15.04", "edge", "amd64", "sudo ubuntu-device-flash core 15.04 --channel edge --developer-mode  -o " + tmpFileName},
-		{"rolling", "stable", "amd64", "sudo ubuntu-device-flash core rolling --channel stable --developer-mode  -o " + tmpFileName},
-		{"15.04", "alpha", "arm", "sudo ubuntu-device-flash core 15.04 --channel alpha --developer-mode --oem beagleblack -o " + tmpFileName},
+		{"15.04", "edge", "amd64", 100, "sudo ubuntu-device-flash core 15.04 --revision=100 --channel edge --developer-mode  -o " + filename},
+		{"rolling", "stable", "amd64", 100, "sudo ubuntu-device-flash core rolling --revision=100 --channel stable --developer-mode  -o " + filename},
+		{"15.04", "alpha", "arm", 56, "sudo ubuntu-device-flash core 15.04 --revision=56 --channel alpha --developer-mode --oem beagleblack -o " + filename},
 	}
 
 	for _, item := range testCases {
 		s.cli.execCommandCalls = make(map[string]int)
-		_, err := s.subject.Create(item.release, item.channel, item.arch)
+		_, err := s.subject.Create(item.release, item.channel, item.arch, item.version)
 
 		c.Check(err, check.IsNil)
 
 		c.Assert(len(s.cli.execCommandCalls) > 0, check.Equals, true)
-
 		c.Check(s.cli.execCommandCalls[item.expectedCall], check.Equals, 1)
 	}
 }
@@ -93,24 +96,24 @@ func (s *imageSuite) TestCreateCallsUDF(c *check.C) {
 func (s *imageSuite) TestCreateReturnsUDFError(c *check.C) {
 	s.cli.err = true
 
-	_, err := s.subject.Create(testDefaultRelease, testDefaultChannel, testDefaultArch)
+	_, err := s.subject.Create(testDefaultRelease, testDefaultChannel, testDefaultArch, 100)
 
 	c.Assert(err, check.NotNil)
 }
 
 func (s *imageSuite) TestCreateReturnsCreatedFilePath(c *check.C) {
-	s.cli.output = tmpFileName
-	path, err := s.subject.Create(testDefaultRelease, testDefaultChannel, testDefaultArch)
+	s.cli.output = tmpDirName
+	path, err := s.subject.Create(testDefaultRelease, testDefaultChannel, testDefaultArch, 100)
 	c.Assert(err, check.IsNil)
 
 	c.Assert(path, check.Not(check.Equals), "")
-	c.Assert(path, check.Equals, tmpFileName)
+	c.Assert(path, check.Equals, tmpFileName())
 }
 
 func (s *imageSuite) TestCreateUsesTmpFileName(c *check.C) {
-	_, err := s.subject.Create(testDefaultRelease, testDefaultChannel, testDefaultArch)
+	_, err := s.subject.Create(testDefaultRelease, testDefaultChannel, testDefaultArch, 100)
 
-	c.Assert(s.cli.execCommandCalls["mktemp"], check.Equals, 1)
+	c.Assert(s.cli.execCommandCalls["mktemp -d"], check.Equals, 1)
 	c.Assert(err, check.IsNil)
 }
 
@@ -120,4 +123,8 @@ func extractKey(m map[string]int, order int) string {
 		keys = append(keys, key)
 	}
 	return keys[order]
+}
+
+func tmpFileName() string {
+	return filepath.Join(tmpDirName, outputFileName)
 }
