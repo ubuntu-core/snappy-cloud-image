@@ -24,7 +24,7 @@ import "flag"
 
 // Options has fields for the existing flags
 type Options struct {
-	action, release, channel, arch string
+	Action, Release, Channel, Arch string
 }
 
 const (
@@ -44,8 +44,5 @@ func Parse() *Options {
 	)
 	flag.Parse()
 	return &Options{
-		action:  *action,
-		release: *release,
-		channel: *channel,
-		arch:    *arch}
+		Action: *action, Release: *release, Channel: *channel, Arch: *arch}
 }

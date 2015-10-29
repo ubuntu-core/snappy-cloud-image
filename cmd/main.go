@@ -29,6 +29,7 @@ import (
 func main() {
 	parsedFlags := flags.Parse()
 
+	runner := &runner.Runner{}
 	err := runner.Exec(parsedFlags)
 	if err != nil {
 		log.Panic(err.Error())
