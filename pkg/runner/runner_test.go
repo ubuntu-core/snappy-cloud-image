@@ -108,7 +108,7 @@ func (s *runnerSuite) SetUpSuite(c *check.C) {
 	s.siClient = &fakeSiClient{}
 	s.cloudClient = &fakeCloudClient{}
 	s.udfDriver = &fakeImgDriver{}
-	s.subject = &Runner{imgDataOrigin: s.siClient, imgDataTarget: s.cloudClient, imgDriver: s.udfDriver}
+	s.subject = NewRunner(s.siClient, s.cloudClient, s.udfDriver)
 	s.options = &flags.Options{
 		Action: "create", Release: "15.04", Channel: "edge", Arch: "amd64"}
 }

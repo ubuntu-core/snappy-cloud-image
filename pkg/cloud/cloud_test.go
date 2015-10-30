@@ -78,7 +78,7 @@ func Test(t *testing.T) { check.TestingT(t) }
 
 func (s *cloudSuite) SetUpSuite(c *check.C) {
 	s.cli = &fakeCliCommander{}
-	s.subject = &Client{cli: s.cli}
+	s.subject = NewClient(s.cli)
 }
 
 func (s *cloudSuite) SetUpTest(c *check.C) {

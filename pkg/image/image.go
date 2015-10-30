@@ -52,6 +52,11 @@ type UDF struct {
 	cli cli.Commander
 }
 
+// NewUDF is the UDF constructor
+func NewUDF(cli cli.Commander) *UDF {
+	return &UDF{cli: cli}
+}
+
 // Create makes the required call to UDF to
 func (u *UDF) Create(release, channel, arch string, ver int) (path string, err error) {
 	tmpDirName, _ := u.cli.ExecCommand("mktemp -d")

@@ -35,6 +35,11 @@ type Runner struct {
 	imgDriver     image.Driver
 }
 
+// NewRunner is the Runner constructor
+func NewRunner(imgDataOrigin image.Pollster, imgDataTarget image.PollsterCreator, imgDriver image.Driver) *Runner {
+	return &Runner{imgDataOrigin: imgDataOrigin, imgDataTarget: imgDataTarget, imgDriver: imgDriver}
+}
+
 // ErrVersion is the type of the error returned by Exec when the version
 // in SI is greater than or equal the version in cloud
 type ErrVersion struct {

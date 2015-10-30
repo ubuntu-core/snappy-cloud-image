@@ -101,7 +101,7 @@ func (w *fakeWebGetter) Get(url string) (output []byte, err error) {
 
 func (s *siSuite) SetUpSuite(c *check.C) {
 	s.webGetter = &fakeWebGetter{}
-	s.subject = &Client{httpClient: s.webGetter}
+	s.subject = NewClient(s.webGetter)
 }
 
 func (s *siSuite) SetUpTest(c *check.C) {

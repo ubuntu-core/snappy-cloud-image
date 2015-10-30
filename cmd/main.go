@@ -22,16 +22,27 @@ package main
 import (
 	"log"
 
+	"github.com/fgimenez/snappy-cloud-image/pkg/cli"
+	"github.com/fgimenez/snappy-cloud-image/pkg/cloud"
 	"github.com/fgimenez/snappy-cloud-image/pkg/flags"
+	"github.com/fgimenez/snappy-cloud-image/pkg/image"
 	"github.com/fgimenez/snappy-cloud-image/pkg/runner"
+	"github.com/fgimenez/snappy-cloud-image/pkg/si"
+	"github.com/fgimenez/snappy-cloud-image/pkg/web"
 )
 
 func main() {
 	parsedFlags := flags.Parse()
 
-	runner := &runner.Runner{}
-	err := runner.Exec(parsedFlags)
-	if err != nil {
+	cliExecutor := &cli.Executor{}
+	httpClient := &web.Client{}
+
+	imgDataOrigin := si.NewClient(httpClient)
+	imgDataTarget := cloud.NewClient(cliExecutor)
+	imgDriver := image.NewUDF(cliExecutor)
+
+	runner := runner.NewRunner(imgDataOrigin, imgDataTarget, imgDriver)
+	if err := runner.Exec(parsedFlags); err != nil {
 		log.Panic(err.Error())
 	}
 }
