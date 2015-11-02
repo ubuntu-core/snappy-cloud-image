@@ -73,6 +73,12 @@ func (s *flagsSuite) TestParseDefaultArch(c *check.C) {
 	c.Assert(parsedFlags.Arch, check.Equals, defaultArch)
 }
 
+func (s *flagsSuite) TestParseDefaultLoglevel(c *check.C) {
+	parsedFlags := Parse()
+
+	c.Assert(parsedFlags.LogLevel, check.Equals, defaultLogLevel)
+}
+
 func (s *flagsSuite) TestParseSetsActionToFlagValue(c *check.C) {
 	os.Args = []string{"", "-action", "myaction"}
 	parsedFlags := Parse()
@@ -99,6 +105,13 @@ func (s *flagsSuite) TestParseSetsArchToFlagValue(c *check.C) {
 	parsedFlags := Parse()
 
 	c.Assert(parsedFlags.Arch, check.Equals, "myarch")
+}
+
+func (s *flagsSuite) TestParseSetsLogLevelToFlagValue(c *check.C) {
+	os.Args = []string{"", "-loglevel", "myloglevel"}
+	parsedFlags := Parse()
+
+	c.Assert(parsedFlags.LogLevel, check.Equals, "myloglevel")
 }
 
 // from flag.ResetForTesting

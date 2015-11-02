@@ -22,10 +22,12 @@ package runner
 import (
 	"fmt"
 	"os"
-	"sync"
 
-	"github.com/fgimenez/snappy-cloud-image/pkg/flags"
-	"github.com/fgimenez/snappy-cloud-image/pkg/image"
+	log "github.com/Sirupsen/logrus"
+
+	"github.com/ubuntu-core/snappy-cloud-image/pkg/cloud"
+	"github.com/ubuntu-core/snappy-cloud-image/pkg/flags"
+	"github.com/ubuntu-core/snappy-cloud-image/pkg/image"
 )
 
 // Runner is the main type of the package
@@ -64,6 +66,7 @@ func (e *ErrActionUnknown) Error() string {
 // handles the logic of the utility
 func (r *Runner) Exec(options *flags.Options) (err error) {
 	if options.Action == "create" {
+		log.Infof("Checking current versions for release %s, channel %s and arch %s", options.Release, options.Channel, options.Arch)
 		var siVersion, cloudVersion int
 		siVersion, cloudVersion, err = r.getVersions(options.Release, options.Channel, options.Arch)
 		if err != nil {
@@ -78,6 +81,7 @@ func (r *Runner) Exec(options *flags.Options) (err error) {
 		if err != nil {
 			return
 		}
+		log.Infof("Created image file in %s, uploading", path)
 		err = r.imgDataTarget.Create(path, options.Release, options.Channel, options.Arch, siVersion)
 		if err != nil {
 			return
@@ -89,27 +93,32 @@ func (r *Runner) Exec(options *flags.Options) (err error) {
 }
 
 func (r *Runner) getVersions(release, channel, arch string) (siVersion, cloudVersion int, err error) {
-	var wg sync.WaitGroup
 	var siError, cloudError error
+	versionChan := make(chan struct{}, 2)
 
-	wg.Add(1)
 	go func() {
 		siVersion, siError = r.imgDataOrigin.GetLatestVersion(release, channel, arch)
-		wg.Done()
+		log.Info("siVersion: ", siVersion)
+		versionChan <- struct{}{}
 	}()
 
-	wg.Add(1)
 	go func() {
 		cloudVersion, cloudError = r.imgDataTarget.GetLatestVersion(release, channel, arch)
-		wg.Done()
+		log.Info("cloudVersion: ", cloudVersion)
+		versionChan <- struct{}{}
 	}()
 
-	wg.Wait()
+	for i := 0; i < 2; i++ {
+		<-versionChan
+	}
+
 	if siError != nil {
 		return 0, 0, siError
 	}
 	if cloudError != nil {
-		return 0, 0, cloudError
+		if _, ok := cloudError.(*cloud.ErrVersionNotFound); !ok {
+			return 0, 0, cloudError
+		}
 	}
 	return
 }

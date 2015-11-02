@@ -26,7 +26,7 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/fgimenez/snappy-cloud-image/pkg/cli"
+	"github.com/ubuntu-core/snappy-cloud-image/pkg/cli"
 )
 
 const outputFileName = "udf.img"
