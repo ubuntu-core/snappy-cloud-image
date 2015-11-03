@@ -7,11 +7,12 @@ Build-Depends: bzr,
                dh-golang,
                git,
                golang-check.v1-dev,
+               golang-logrus-dev,
                golang-go,
                mercurial,
 Standards-Version: 3.9.6
-Homepage: https://launchpad.net/snappy-cloud-image
-Vcs-Browser: https://git.launchpad.net/snappy-cloud-image
+Homepage: https://github.com/ubuntu-core/snappy-cloud-image
+Vcs-Browser: https://github.com/ubuntu-core/snappy-cloud-image
 
 Package: snappy-cloud-image
 Architecture: any
