@@ -25,6 +25,9 @@ package image
 import (
 	"path/filepath"
 	"strconv"
+	"strings"
+
+	log "github.com/Sirupsen/logrus"
 
 	"github.com/ubuntu-core/snappy-cloud-image/pkg/cli"
 )
@@ -59,16 +62,22 @@ func NewUDF(cli cli.Commander) *UDF {
 
 // Create makes the required call to UDF to
 func (u *UDF) Create(release, channel, arch string, ver int) (path string, err error) {
-	tmpDirName, _ := u.cli.ExecCommand("mktemp -d")
-	tmpFileName := filepath.Join(tmpDirName, outputFileName)
+	tmpDirName, err := u.cli.ExecCommand("mktemp", "-d")
+	if err != nil {
+		return
+	}
+	tmpFileName := filepath.Join(strings.TrimSpace(tmpDirName), outputFileName)
+	log.Debug("Target image filename: ", tmpFileName)
 
 	var archFlag string
 	if arch == "arm" {
 		archFlag = "--oem beagleblack"
 	}
-	_, err = u.cli.ExecCommand("sudo", "ubuntu-device-flash", "core", release,
-		"--revision="+strconv.Itoa(ver), "--channel", channel, "--developer-mode",
-		archFlag, "-o", tmpFileName)
+	cmds := []string{"sudo", "ubuntu-device-flash", "--revision=" + strconv.Itoa(ver), "core", release,
+		"--channel", channel, "--developer-mode",
+		archFlag, "-o", tmpFileName}
+	log.Debug("Executing command ", strings.Join(cmds, " "))
+	_, err = u.cli.ExecCommand(cmds...)
 
 	return tmpFileName, err
 }
