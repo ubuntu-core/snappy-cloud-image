@@ -20,19 +20,21 @@
 package main
 
 import (
-	"log"
+	log "github.com/Sirupsen/logrus"
 
-	"github.com/fgimenez/snappy-cloud-image/pkg/cli"
-	"github.com/fgimenez/snappy-cloud-image/pkg/cloud"
-	"github.com/fgimenez/snappy-cloud-image/pkg/flags"
-	"github.com/fgimenez/snappy-cloud-image/pkg/image"
-	"github.com/fgimenez/snappy-cloud-image/pkg/runner"
-	"github.com/fgimenez/snappy-cloud-image/pkg/si"
-	"github.com/fgimenez/snappy-cloud-image/pkg/web"
+	"github.com/ubuntu-core/snappy-cloud-image/pkg/cli"
+	"github.com/ubuntu-core/snappy-cloud-image/pkg/cloud"
+	"github.com/ubuntu-core/snappy-cloud-image/pkg/flags"
+	"github.com/ubuntu-core/snappy-cloud-image/pkg/image"
+	"github.com/ubuntu-core/snappy-cloud-image/pkg/runner"
+	"github.com/ubuntu-core/snappy-cloud-image/pkg/si"
+	"github.com/ubuntu-core/snappy-cloud-image/pkg/web"
 )
 
 func main() {
 	parsedFlags := flags.Parse()
+
+	setLogLevel(parsedFlags.LogLevel)
 
 	cliExecutor := &cli.Executor{}
 	httpClient := &web.Client{}
@@ -43,6 +45,15 @@ func main() {
 
 	runner := runner.NewRunner(imgDataOrigin, imgDataTarget, imgDriver)
 	if err := runner.Exec(parsedFlags); err != nil {
-		log.Panic(err.Error())
+		log.Error(err.Error())
+	}
+}
+
+func setLogLevel(lvl string) {
+	if level, err := log.ParseLevel(lvl); err != nil {
+		log.Printf("Unknown log level %s, setting to info", lvl)
+		log.SetLevel(log.InfoLevel)
+	} else {
+		log.SetLevel(level)
 	}
 }

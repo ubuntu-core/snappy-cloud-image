@@ -29,7 +29,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/fgimenez/snappy-cloud-image/pkg/cli"
+	log "github.com/Sirupsen/logrus"
+
+	"github.com/ubuntu-core/snappy-cloud-image/pkg/cli"
 )
 
 const (
@@ -52,6 +54,11 @@ func NewClient(cli cli.Commander) *Client {
 // release, channel and arch
 type ErrVersionNotFound struct{ release, channel, arch string }
 
+// NewErrVersionNotFound is th ErrVersionNotFound constructor
+func NewErrVersionNotFound(release, channel, arch string) *ErrVersionNotFound {
+	return &ErrVersionNotFound{release: release, channel: channel, arch: arch}
+}
+
 func (e *ErrVersionNotFound) Error() string {
 	return fmt.Sprintf(errVerNotFoundPattern, e.release, e.channel, e.arch)
 }
@@ -70,6 +77,9 @@ func (c *Client) GetLatestVersion(release, channel, arch string) (ver int, err e
 // and the required bits for making up the image name
 func (c *Client) Create(path, release, channel, arch string, version int) (err error) {
 	imageID := getImageID(release, channel, arch, version)
+
+	log.Debugf("Creating image %s from file %s", imageID, path)
+
 	_, err = c.cli.ExecCommand("openstack", "image", "create", "--file", path, imageID)
 	return
 }
@@ -97,7 +107,7 @@ func extractVersionFromList(list, release, channel, arch string) (ver int, err e
 		sort.Sort(sort.Reverse(imageIDs[:]))
 		return extractVersion(imageIDs[0])
 	}
-	return 0, &ErrVersionNotFound{release: release, channel: channel, arch: arch}
+	return 0, NewErrVersionNotFound(release, channel, arch)
 }
 
 func imgTemplate(release, channel, arch string) (pattern string) {

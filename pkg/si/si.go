@@ -24,7 +24,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/fgimenez/snappy-cloud-image/pkg/web"
+	"github.com/ubuntu-core/snappy-cloud-image/pkg/web"
 )
 
 const (
