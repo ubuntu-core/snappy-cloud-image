@@ -76,16 +76,18 @@ func (r *Runner) Exec(options *flags.Options) (err error) {
 			return &ErrVersion{siVersion, cloudVersion}
 		}
 		var path string
+		log.Infof("Creating image file in %s", path)
 		path, err = r.imgDriver.Create(options.Release, options.Channel, options.Arch, siVersion)
 		defer os.Remove(path)
 		if err != nil {
 			return
 		}
-		log.Infof("Created image file in %s, uploading", path)
+		log.Infof("Uploading %s", path)
 		err = r.imgDataTarget.Create(path, options.Release, options.Channel, options.Arch, siVersion)
 		if err != nil {
 			return
 		}
+		log.Infof("Finished", path)
 	} else {
 		return &ErrActionUnknown{action: options.Action}
 	}

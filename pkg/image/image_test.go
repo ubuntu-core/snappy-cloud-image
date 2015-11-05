@@ -77,9 +77,9 @@ func (s *imageSuite) TestCreateCallsUDF(c *check.C) {
 		version                int
 		expectedCall           string
 	}{
-		{"15.04", "edge", "amd64", 100, "sudo ubuntu-device-flash core 15.04 --revision=100 --channel edge --developer-mode  -o " + filename},
-		{"rolling", "stable", "amd64", 100, "sudo ubuntu-device-flash core rolling --revision=100 --channel stable --developer-mode  -o " + filename},
-		{"15.04", "alpha", "arm", 56, "sudo ubuntu-device-flash core 15.04 --revision=56 --channel alpha --developer-mode --oem beagleblack -o " + filename},
+		{"15.04", "edge", "amd64", 100, "sudo ubuntu-device-flash --revision=100 core 15.04 --channel edge --developer-mode  -o " + filename},
+		{"rolling", "stable", "amd64", 100, "sudo ubuntu-device-flash --revision=100 core rolling --channel stable --developer-mode  -o " + filename},
+		{"15.04", "alpha", "arm", 56, "sudo ubuntu-device-flash --revision=56 core 15.04 --channel alpha --developer-mode --oem beagleblack -o " + filename},
 	}
 
 	for _, item := range testCases {
