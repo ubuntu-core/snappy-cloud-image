@@ -1,2 +1,5 @@
 *~
 *.test
+debian/files
+debian/snappy-cloud-image*
+obj-x86_64-linux-gnu/
