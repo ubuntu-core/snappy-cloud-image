@@ -24,25 +24,27 @@ import "flag"
 
 // Options has fields for the existing flags
 type Options struct {
-	Action, Release, Channel, Arch string
+	Action, Release, Channel, Arch, LogLevel string
 }
 
 const (
-	defaultAction  = "create"
-	defaultRelease = "rolling"
-	defaultChannel = "edge"
-	defaultArch    = "amd64"
+	defaultAction   = "create"
+	defaultRelease  = "rolling"
+	defaultChannel  = "edge"
+	defaultArch     = "amd64"
+	defaultLogLevel = "info"
 )
 
 // Parse analyzes the flags and returns a Options instance with the values
 func Parse() *Options {
 	var (
-		action  = flag.String("action", defaultAction, "action to be performed")
-		release = flag.String("release", defaultRelease, "release of the image to be created")
-		channel = flag.String("channel", defaultChannel, "channel of the image to be created")
-		arch    = flag.String("arch", defaultArch, "arch of the image to be created")
+		action   = flag.String("action", defaultAction, "action to be performed")
+		release  = flag.String("release", defaultRelease, "release of the image to be created")
+		channel  = flag.String("channel", defaultChannel, "channel of the image to be created")
+		arch     = flag.String("arch", defaultArch, "arch of the image to be created")
+		logLevel = flag.String("loglevel", defaultLogLevel, "Level of the log putput, one of debug, info, warning, error, fatal, panic")
 	)
 	flag.Parse()
 	return &Options{
-		Action: *action, Release: *release, Channel: *channel, Arch: *arch}
+		Action: *action, Release: *release, Channel: *channel, Arch: *arch, LogLevel: *logLevel}
 }

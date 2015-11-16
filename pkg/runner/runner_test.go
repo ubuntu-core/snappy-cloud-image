@@ -24,7 +24,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/fgimenez/snappy-cloud-image/pkg/flags"
+	"github.com/ubuntu-core/snappy-cloud-image/pkg/cloud"
+	"github.com/ubuntu-core/snappy-cloud-image/pkg/flags"
 
 	"gopkg.in/check.v1"
 )
@@ -64,11 +65,12 @@ func (s *fakeSiClient) GetLatestVersion(release, channel, arch string) (ver int,
 }
 
 type fakeCloudClient struct {
-	getVersionCalls map[string]int
-	createCalls     map[string]int
-	doVerErr        bool
-	doCreateErr     bool
-	version         int
+	getVersionCalls  map[string]int
+	createCalls      map[string]int
+	doVerErr         bool
+	doVerNotFoundErr bool
+	doCreateErr      bool
+	version          int
 }
 
 func (s *fakeCloudClient) GetLatestVersion(release, channel, arch string) (ver int, err error) {
@@ -76,6 +78,9 @@ func (s *fakeCloudClient) GetLatestVersion(release, channel, arch string) (ver i
 	s.getVersionCalls[key]++
 	if s.doVerErr {
 		err = fmt.Errorf(cloudVersionError)
+	}
+	if s.doVerNotFoundErr {
+		err = cloud.NewErrVersionNotFound(release, channel, arch)
 	}
 	return s.version, err
 }
@@ -120,6 +125,7 @@ func (s *runnerSuite) SetUpTest(c *check.C) {
 	s.cloudClient.getVersionCalls = make(map[string]int)
 	s.cloudClient.createCalls = make(map[string]int)
 	s.cloudClient.doVerErr = false
+	s.cloudClient.doVerNotFoundErr = false
 	s.cloudClient.doCreateErr = false
 	s.cloudClient.version = 1
 	s.udfDriver.createCalls = make(map[string]int)
@@ -178,6 +184,13 @@ func (s *runnerSuite) TestExecReturnsGetCloudVersionError(c *check.C) {
 
 	c.Assert(err, check.NotNil)
 	c.Assert(err.Error(), check.Equals, cloudVersionError)
+}
+
+func (s *runnerSuite) TestExecDoesNotReturnGetCloudVersionNotFoundError(c *check.C) {
+	s.cloudClient.doVerNotFoundErr = true
+	err := s.subject.Exec(s.options)
+
+	c.Assert(err, check.IsNil)
 }
 
 func (s *runnerSuite) TestExecReturnsErrVersionIfCloudVersionNotLessThanSIVersion(c *check.C) {

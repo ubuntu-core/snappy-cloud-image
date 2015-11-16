@@ -25,7 +25,7 @@ import (
 
 	"gopkg.in/check.v1"
 
-	"github.com/fgimenez/snappy-cloud-image/pkg/web"
+	"github.com/ubuntu-core/snappy-cloud-image/pkg/web"
 )
 
 var (
