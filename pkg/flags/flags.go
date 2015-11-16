@@ -20,7 +20,10 @@
 // Package flags handles the given flags
 package flags
 
-import "flag"
+import (
+	"flag"
+	"strings"
+)
 
 // Options has fields for the existing flags
 type Options struct {
@@ -45,6 +48,9 @@ func Parse() *Options {
 		logLevel = flag.String("loglevel", defaultLogLevel, "Level of the log putput, one of debug, info, warning, error, fatal, panic")
 	)
 	flag.Parse()
+	// there are different conventions for the release name, system-image and udf use it with a dot, the
+	// official snappy cloud images use it without the dot
+	*release = strings.Replace(*release, ".", "", -1)
 	return &Options{
 		Action: *action, Release: *release, Channel: *channel, Arch: *arch, LogLevel: *logLevel}
 }
