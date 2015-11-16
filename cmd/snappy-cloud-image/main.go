@@ -45,7 +45,7 @@ func main() {
 
 	runner := runner.NewRunner(imgDataOrigin, imgDataTarget, imgDriver)
 	if err := runner.Exec(parsedFlags); err != nil {
-		log.Error(err.Error())
+		log.Fatal(err.Error())
 	}
 }
 
