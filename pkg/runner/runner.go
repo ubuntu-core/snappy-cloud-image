@@ -51,7 +51,7 @@ type ErrVersion struct {
 }
 
 func (e *ErrVersion) Error() string {
-	return fmt.Sprintf("error SI version %d is lower than cloud version %d", e.siVersion, e.cloudVersion)
+	return fmt.Sprintf("error SI version %d is not greater than cloud version %d", e.siVersion, e.cloudVersion)
 }
 
 // ErrActionUnknown is the type of the error returned by Exec when the
