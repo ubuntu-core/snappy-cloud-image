@@ -21,6 +21,7 @@ package cloud
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -137,6 +138,15 @@ func (s *cloudSuite) TestGetLatestVersionReturnsGlanceError(c *check.C) {
 	c.Assert(err, check.NotNil)
 }
 
+func (s *cloudSuite) TestGetLatestVersionReturnsVersionNumberError(c *check.C) {
+	s.cli.output = "| 762d5ce2-fbc2-4685-8d6c-71249d19df9e | ubuntu-core/custom/ubuntu-rolling-snappy-core-amd64-edge-10f-disk1.img |"
+
+	_, err := s.subject.GetLatestVersion(testDefaultRelease, testDefaultChannel, testDefaultArch)
+
+	c.Assert(err, check.NotNil)
+	c.Assert(err, check.FitsTypeOf, &strconv.NumError{})
+}
+
 func (s *cloudSuite) TestGetLatestVersionReturnsVersionNotFoundError(c *check.C) {
 	s.cli.output = fmt.Sprintf(baseCompleteResponse, "", "", "", "")
 
@@ -170,4 +180,114 @@ func (s *cloudSuite) TestCreateReturnsError(c *check.C) {
 		testDefaultRelease, testDefaultChannel, testDefaultArch, version)
 
 	c.Assert(err, check.NotNil)
+}
+
+func (s *cloudSuite) TestGetImageID(c *check.C) {
+	testCases := []struct {
+		release, channel, arch string
+		version                int
+		expectedID             string
+	}{
+		{"rolling", "edge", "amd64", 100, "ubuntu-core/custom/ubuntu-rolling-snappy-core-amd64-edge-100-disk1.img"},
+		{"rolling", "stable", "amd64", 10, "ubuntu-core/custom/ubuntu-rolling-snappy-core-amd64-stable-10-disk1.img"},
+		{"rolling", "alpha", "amd64", 210, "ubuntu-core/custom/ubuntu-rolling-snappy-core-amd64-alpha-210-disk1.img"},
+		{"1504", "edge", "amd64", 54, "ubuntu-core/custom/ubuntu-1504-snappy-core-amd64-edge-54-disk1.img"},
+		{"1504", "stable", "amd64", 23, "ubuntu-core/custom/ubuntu-1504-snappy-core-amd64-stable-23-disk1.img"},
+		{"1504", "alpha", "amd64", 2105, "ubuntu-core/custom/ubuntu-1504-snappy-core-amd64-alpha-2105-disk1.img"},
+	}
+	for _, item := range testCases {
+		c.Assert(GetImageID(item.release, item.channel, item.arch, item.version), check.Equals, item.expectedID)
+	}
+}
+
+func (s *cloudSuite) TestDeleteCallsCli(c *check.C) {
+	testCases := []struct {
+		images       []string
+		expectedCall string
+	}{
+		{[]string{"version1", "version2"}, "openstack delete version1 version2"},
+		{[]string{"version2", "version1"}, "openstack delete version2 version1"},
+		{[]string{"version2", "version1", "version3", "version4"}, "openstack delete version2 version1 version3 version4"},
+	}
+	for _, item := range testCases {
+		s.subject.Delete(item.images...)
+		c.Assert(s.cli.execCommandCalls[item.expectedCall], check.Equals, 1)
+	}
+}
+
+func (s *cloudSuite) TestDeleteReturnsCliError(c *check.C) {
+	s.cli.err = true
+
+	err := s.subject.Delete("image1", "image2")
+
+	c.Assert(err, check.NotNil)
+}
+
+func (s *cloudSuite) TestGetVersionsReturnsImageNames(c *check.C) {
+	version := 100
+	versionLine := fmt.Sprintf(baseResponse, testDefaultRelease, testDefaultArch, testDefaultChannel, version)
+	versionID := getIDFromGlanceResponse(versionLine)
+	versionPlusOneLine := fmt.Sprintf(baseResponse, testDefaultRelease, testDefaultArch, testDefaultChannel, version+1)
+	versionPlusOneID := getIDFromGlanceResponse(versionPlusOneLine)
+	versionPlusTwoLine := fmt.Sprintf(baseResponse, testDefaultRelease, testDefaultArch, testDefaultChannel, version+2)
+	versionPlusTwoID := getIDFromGlanceResponse(versionPlusTwoLine)
+
+	testCases := []struct {
+		glanceOutput, release, channel, arch string
+		expectedImageNames                   []string
+	}{
+		{fmt.Sprintf(baseCompleteResponse, "", "", "", ""), testDefaultRelease, testDefaultChannel, testDefaultArch,
+			[]string{}},
+		{fmt.Sprintf(baseCompleteResponse, versionLine, "", "", ""),
+			testDefaultRelease, testDefaultChannel, testDefaultArch,
+			[]string{versionID}},
+		{fmt.Sprintf(baseCompleteResponse, versionLine, versionPlusOneLine, "", ""),
+			testDefaultRelease, testDefaultChannel, testDefaultArch,
+			[]string{versionPlusOneID, versionID}},
+		{fmt.Sprintf(baseCompleteResponse, versionPlusOneLine, versionLine, "", ""),
+			testDefaultRelease, testDefaultChannel, testDefaultArch,
+			[]string{versionPlusOneID, versionID}},
+		{fmt.Sprintf(baseCompleteResponse, versionPlusOneLine, versionLine, "", versionPlusTwoLine),
+			testDefaultRelease, testDefaultChannel, testDefaultArch,
+			[]string{versionPlusTwoID, versionPlusOneID, versionID}},
+		{fmt.Sprintf(baseCompleteResponse, versionPlusOneLine, versionPlusTwoLine, versionLine, versionPlusOneLine),
+			testDefaultRelease, testDefaultChannel, testDefaultArch,
+			[]string{versionPlusTwoID, versionPlusOneID, versionPlusOneID, versionID}},
+	}
+	for _, item := range testCases {
+		s.cli.output = item.glanceOutput
+		imageList, _ := s.subject.GetVersions(item.release, item.channel, item.arch)
+
+		c.Check(testEq(imageList, item.expectedImageNames), check.Equals, true)
+	}
+}
+
+func getIDFromGlanceResponse(response string) string {
+	// response is of the form:
+	// | 762d5ce2-fbc2-4685-8d6c-71249d19df9e | ubuntu-core/custom/ubuntu-%s-snappy-core-%s-%s-%d-disk1.img                        |
+	items := strings.Fields(response)
+	return items[3]
+}
+
+func testEq(a, b []string) bool {
+
+	if a == nil && b == nil {
+		return true
+	}
+
+	if a == nil || b == nil {
+		return false
+	}
+
+	if len(a) != len(b) {
+		return false
+	}
+
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+
+	return true
 }

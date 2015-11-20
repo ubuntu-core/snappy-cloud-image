@@ -39,10 +39,17 @@ type Pollster interface {
 	GetLatestVersion(release, channel, arch string) (ver int, err error)
 }
 
-// PollsterCreator is a Pollster that can also create new images
-type PollsterCreator interface {
+// FullPollster is a Pollster that knows how to get a list of Versions too
+type FullPollster interface {
 	Pollster
+	GetVersions(release, channel, arch string) (images []string, err error)
+}
+
+// PollsterWriter is a Pollster that can also create new images
+type PollsterWriter interface {
+	FullPollster
 	Create(filePath, release, channel, arch string, version int) (err error)
+	Delete(images ...string) (err error)
 }
 
 // Driver defines the methods required for creating images

@@ -30,15 +30,17 @@ import (
 	"github.com/ubuntu-core/snappy-cloud-image/pkg/image"
 )
 
+const imagesToKeep = 5
+
 // Runner is the main type of the package
 type Runner struct {
 	imgDataOrigin image.Pollster
-	imgDataTarget image.PollsterCreator
+	imgDataTarget image.PollsterWriter
 	imgDriver     image.Driver
 }
 
 // NewRunner is the Runner constructor
-func NewRunner(imgDataOrigin image.Pollster, imgDataTarget image.PollsterCreator, imgDriver image.Driver) *Runner {
+func NewRunner(imgDataOrigin image.Pollster, imgDataTarget image.PollsterWriter, imgDriver image.Driver) *Runner {
 	return &Runner{imgDataOrigin: imgDataOrigin, imgDataTarget: imgDataTarget, imgDriver: imgDriver}
 }
 
@@ -66,32 +68,38 @@ func (e *ErrActionUnknown) Error() string {
 // handles the logic of the utility
 func (r *Runner) Exec(options *flags.Options) (err error) {
 	if options.Action == "create" {
-		log.Infof("Checking current versions for release %s, channel %s and arch %s", options.Release, options.Channel, options.Arch)
-		var siVersion, cloudVersion int
-		siVersion, cloudVersion, err = r.getVersions(options.Release, options.Channel, options.Arch)
-		if err != nil {
-			return
-		}
-		if siVersion <= cloudVersion {
-			return &ErrVersion{siVersion, cloudVersion}
-		}
-		var path string
-		log.Infof("Creating image file in %s", path)
-		path, err = r.imgDriver.Create(options.Release, options.Channel, options.Arch, siVersion)
-		defer os.Remove(path)
-		if err != nil {
-			return
-		}
-		log.Infof("Uploading %s", path)
-		err = r.imgDataTarget.Create(path, options.Release, options.Channel, options.Arch, siVersion)
-		if err != nil {
-			return
-		}
-		log.Infof("Finished", path)
-	} else {
-		return &ErrActionUnknown{action: options.Action}
+		return r.createActions(options)
+	} else if options.Action == "cleanup" {
+		return r.cleanupActions(options)
 	}
+	return &ErrActionUnknown{action: options.Action}
+}
+
+func (r *Runner) createActions(options *flags.Options) (err error) {
+	log.Infof("Checking current versions for release %s, channel %s and arch %s", options.Release, options.Channel, options.Arch)
+	var siVersion, cloudVersion int
+	siVersion, cloudVersion, err = r.getVersions(options.Release, options.Channel, options.Arch)
+	if err != nil {
+		return
+	}
+	if siVersion <= cloudVersion {
+		return &ErrVersion{siVersion, cloudVersion}
+	}
+	var path string
+	path, err = r.imgDriver.Create(options.Release, options.Channel, options.Arch, siVersion)
+	defer os.Remove(path)
+	log.Infof("Creating image file in %s", path)
+	if err != nil {
+		return
+	}
+	log.Infof("Uploading %s", path)
+	err = r.imgDataTarget.Create(path, options.Release, options.Channel, options.Arch, siVersion)
+	if err != nil {
+		return
+	}
+	log.Infof("Finished", path)
 	return
+
 }
 
 func (r *Runner) getVersions(release, channel, arch string) (siVersion, cloudVersion int, err error) {
@@ -121,6 +129,20 @@ func (r *Runner) getVersions(release, channel, arch string) (siVersion, cloudVer
 		if _, ok := cloudError.(*cloud.ErrVersionNotFound); !ok {
 			return 0, 0, cloudError
 		}
+	}
+	return
+}
+
+func (r *Runner) cleanupActions(options *flags.Options) (err error) {
+	imageList, err := r.imgDataTarget.GetVersions(options.Release, options.Channel, options.Arch)
+	if err != nil {
+		return
+	}
+	if len(imageList) > imagesToKeep {
+		// assumes that imageList is sorted in descending order,
+		// the last items in the list will be the older ones
+		log.Infof("Removing images", imageList[imagesToKeep:])
+		err = r.imgDataTarget.Delete(imageList[imagesToKeep:]...)
 	}
 	return
 }
