@@ -93,13 +93,6 @@ func (s *flagsSuite) TestParseSetsReleaseToFlagValue(c *check.C) {
 	c.Assert(parsedFlags.Release, check.Equals, "myrelease")
 }
 
-func (s *flagsSuite) TestParseRemovesDotsFromRelease(c *check.C) {
-	os.Args = []string{"", "-release", "my.release"}
-	parsedFlags := Parse()
-
-	c.Assert(parsedFlags.Release, check.Equals, "myrelease")
-}
-
 func (s *flagsSuite) TestParseSetsChannelToFlagValue(c *check.C) {
 	os.Args = []string{"", "-channel", "mychannel"}
 	parsedFlags := Parse()
