@@ -96,7 +96,7 @@ func (c *Client) extractVersionsFromList(release, channel, arch string) ([]strin
 	| 842949c6-225b-4ad0-81b7-98de2b818eed | smoser-lucid-loader/lucid-amd64-linux-image-2.6.32-34-virtual-v-2.6.32-34.77~smloader0-kernel        |
 	| 762d5ce2-fbc2-4685-8d6c-71249d19df9e | ubuntu-core/custom/ubuntu-1504-snappy-core-amd64-edge-202-disk1.img                                  |
 	*/
-	list, err := c.cli.ExecCommand("openstack", "image", "list")
+	list, err := c.cli.ExecCommand("openstack", "image", "list", "--property", "status=active")
 	if err != nil {
 		return []string{}, err
 	}
