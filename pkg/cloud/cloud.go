@@ -66,17 +66,21 @@ func (e *ErrVersionNotFound) Error() string {
 // GetLatestVersion returns the highest version of the custom images for the given
 // release, channel and arch, -1 if none is found, and the eventual error
 func (c *Client) GetLatestVersion(release, channel, arch string) (ver int, err error) {
-	list, err := c.cli.ExecCommand("openstack", "image", "list")
+	imageIDs, err := c.extractVersionsFromList(release, channel, arch)
 	if err != nil {
-		return
+		return 0, err
 	}
-	return extractVersionFromList(list, release, channel, arch)
+	version, err := extractVersion(imageIDs[0])
+	if err != nil {
+		return 0, err
+	}
+	return version, nil
 }
 
 // Create makes the call to create the new image given a file path with the local image
 // and the required bits for making up the image name
 func (c *Client) Create(path, release, channel, arch string, version int) (err error) {
-	imageID := getImageID(release, channel, arch, version)
+	imageID := GetImageID(release, channel, arch, version)
 
 	log.Debugf("Creating image %s from file %s", imageID, path)
 
@@ -84,12 +88,19 @@ func (c *Client) Create(path, release, channel, arch string, version int) (err e
 	return
 }
 
-func extractVersionFromList(list, release, channel, arch string) (ver int, err error) {
+// extractVersionsFromList returns a list of image names that match the given
+// release, channel and arch sorted in descendant version number order
+func (c *Client) extractVersionsFromList(release, channel, arch string) ([]string, error) {
 	/* list is of the form:
 	| 08763be0-3b3d-41e3-b5b0-08b9006fc1d7 | smoser-lucid-loader/lucid-amd64-linux-image-2.6.32-34-virtual-v-2.6.32-34.77~smloader0-build0-loader |
 	| 842949c6-225b-4ad0-81b7-98de2b818eed | smoser-lucid-loader/lucid-amd64-linux-image-2.6.32-34-virtual-v-2.6.32-34.77~smloader0-kernel        |
 	| 762d5ce2-fbc2-4685-8d6c-71249d19df9e | ubuntu-core/custom/ubuntu-1504-snappy-core-amd64-edge-202-disk1.img                                  |
 	*/
+	list, err := c.cli.ExecCommand("openstack", "image", "list")
+	if err != nil {
+		return []string{}, err
+	}
+
 	reader := strings.NewReader(list)
 	scanner := bufio.NewScanner(reader)
 
@@ -105,9 +116,9 @@ func extractVersionFromList(list, release, channel, arch string) (ver int, err e
 	}
 	if len(imageIDs) > 0 {
 		sort.Sort(sort.Reverse(imageIDs[:]))
-		return extractVersion(imageIDs[0])
+		return imageIDs, nil
 	}
-	return 0, NewErrVersionNotFound(release, channel, arch)
+	return []string{}, NewErrVersionNotFound(release, channel, arch)
 }
 
 func imgTemplate(release, channel, arch string) (pattern string) {
@@ -122,7 +133,19 @@ func extractVersion(imageID string) (ver int, err error) {
 	return strconv.Atoi(parts[7])
 }
 
-func getImageID(release, channel, arch string, version int) (name string) {
+// GetImageID returns the image name for the given parameters
+func GetImageID(release, channel, arch string, version int) (name string) {
 	imageNamePrefix := fmt.Sprintf(imageNamePrefixPattern, release, arch, channel)
 	return fmt.Sprintf("%s-%d-%s", imageNamePrefix, version, imageNameSufix)
+}
+
+// Delete calls the cli command to remove the given images
+func (c *Client) Delete(images ...string) (err error) {
+	_, err = c.cli.ExecCommand(append([]string{"openstack", "delete"}, images...)...)
+	return
+}
+
+// GetVersions returns a descending ordered list (newer first) of image names for the given parameters
+func (c *Client) GetVersions(release, channel, arch string) (imageNames []string, err error) {
+	return c.extractVersionsFromList(release, channel, arch)
 }
