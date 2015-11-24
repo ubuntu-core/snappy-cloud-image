@@ -70,14 +70,14 @@ func (e *ErrActionUnknown) Error() string {
 // handles the logic of the utility
 func (r *Runner) Exec(options *flags.Options) (err error) {
 	if options.Action == "create" {
-		return r.createActions(options)
+		return r.create(options)
 	} else if options.Action == "cleanup" {
-		return r.cleanupActions(options)
+		return r.cleanup(options)
 	}
 	return &ErrActionUnknown{action: options.Action}
 }
 
-func (r *Runner) createActions(options *flags.Options) (err error) {
+func (r *Runner) create(options *flags.Options) (err error) {
 	log.Infof("Checking current versions for release %s, channel %s and arch %s", options.Release, options.Channel, options.Arch)
 	var siVersion, cloudVersion int
 	siVersion, cloudVersion, err = r.getVersions(options.Release, options.Channel, options.Arch)
@@ -138,7 +138,7 @@ func (r *Runner) getVersions(release, channel, arch string) (siVersion, cloudVer
 	return
 }
 
-func (r *Runner) cleanupActions(options *flags.Options) (err error) {
+func (r *Runner) cleanup(options *flags.Options) (err error) {
 	noDotsRelease := strings.Replace(options.Release, ".", "", 1)
 	imageList, err := r.imgDataTarget.GetVersions(noDotsRelease, options.Channel, options.Arch)
 	if err != nil {

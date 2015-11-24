@@ -45,7 +45,7 @@ type FullPollster interface {
 	GetVersions(release, channel, arch string) (images []string, err error)
 }
 
-// PollsterWriter is a Pollster that can also create new images
+// PollsterWriter is a Pollster that can also create and delete images
 type PollsterWriter interface {
 	FullPollster
 	Create(filePath, release, channel, arch string, version int) (err error)

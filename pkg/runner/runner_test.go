@@ -389,6 +389,7 @@ func (s *runnerCleanupSuite) TestExecGetVersionsReceivesReleaseWithoutDots(c *ch
 	s.subject.Exec(s.options)
 
 	key := getFakeKey("1504", s.options.Channel, s.options.Arch)
+	fmt.Println(s.cloudClient.getVersionsCalls)
 	c.Assert(s.cloudClient.getVersionsCalls[key], check.Equals, 1)
 }
 
