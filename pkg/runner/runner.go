@@ -88,7 +88,8 @@ func (r *Runner) create(options *flags.Options) (err error) {
 		return &ErrVersion{siVersion, cloudVersion}
 	}
 	var path string
-	dotRelease := addDots(options.Release)
+	// dot is only added if the release is a number of four digits, like 1504
+	dotRelease := addDot(options.Release)
 	path, err = r.imgDriver.Create(dotRelease, options.Channel, options.Arch, siVersion)
 	defer os.Remove(path)
 	log.Infof("Creating image file in %s", path)
@@ -110,7 +111,7 @@ func (r *Runner) getVersions(release, channel, arch string) (siVersion, cloudVer
 	versionChan := make(chan struct{}, 2)
 
 	go func() {
-		dotRelease := addDots(release)
+		dotRelease := addDot(release)
 		siVersion, siError = r.imgDataOrigin.GetLatestVersion(dotRelease, channel, arch)
 		log.Info("siVersion: ", siVersion)
 		versionChan <- struct{}{}
@@ -153,7 +154,7 @@ func (r *Runner) cleanup(options *flags.Options) (err error) {
 	return
 }
 
-func addDots(release string) string {
+func addDot(release string) string {
 	if len(release) == 4 {
 		if _, err := strconv.Atoi(release); err == nil {
 			return release[0:2] + "." + release[2:]
