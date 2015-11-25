@@ -165,6 +165,7 @@ func (s *runnerCreateSuite) SetUpTest(c *check.C) {
 	s.udfDriver.doErr = false
 	s.udfDriver.path = "path"
 	s.options.Action = "create"
+	s.options.Release = "15.04"
 }
 
 func (s *runnerCleanupSuite) SetUpSuite(c *check.C) {
@@ -209,12 +210,30 @@ func (s *runnerCreateSuite) TestExecReturnsGetSIVersionError(c *check.C) {
 	c.Assert(err.Error(), check.Equals, siVersionError)
 }
 
+func (s *runnerCreateSuite) TestExecGetSIVersionReceivesReleaseWithDot(c *check.C) {
+	s.options.Release = "1504"
+
+	s.subject.Exec(s.options)
+
+	key := getFakeKey("15.04", s.options.Channel, s.options.Arch)
+	c.Assert(s.siClient.getVersionCalls[key], check.Equals, 1)
+}
+
 func (s *runnerCreateSuite) TestExecGetsCloudLatestVersion(c *check.C) {
+	s.options.Release = "1504"
 	err := s.subject.Exec(s.options)
 
 	c.Assert(err, check.IsNil)
 
 	key := getFakeKey(s.options.Release, s.options.Channel, s.options.Arch)
+	c.Assert(s.cloudClient.getLatestVersionCalls[key], check.Equals, 1)
+}
+
+func (s *runnerCreateSuite) TestExecGetCloudLatestVersionReceivesReleaseWithoutDot(c *check.C) {
+	s.options.Release = "15.04"
+	s.subject.Exec(s.options)
+
+	key := getFakeKey("1504", s.options.Channel, s.options.Arch)
 	c.Assert(s.cloudClient.getLatestVersionCalls[key], check.Equals, 1)
 }
 
@@ -279,6 +298,15 @@ func (s *runnerCreateSuite) TestExecDoesNotCallDriverCreateOnNonCreateAction(c *
 	c.Assert(len(s.udfDriver.createCalls), check.Equals, 0)
 }
 
+func (s *runnerCreateSuite) TestExecDriverCreateReceivesReleaseWithDot(c *check.C) {
+	s.options.Release = "1504"
+
+	s.subject.Exec(s.options)
+
+	key := getCreateKey("15.04", s.options.Channel, s.options.Arch, s.siClient.version)
+	c.Assert(s.udfDriver.createCalls[key], check.Equals, 1)
+}
+
 func (s *runnerCreateSuite) TestExecReturnsDriverCreateError(c *check.C) {
 	s.udfDriver.doErr = true
 	err := s.subject.Exec(s.options)
@@ -338,6 +366,7 @@ func (s *runnerCreateSuite) TestExecReturnsErrorOnInvalidAction(c *check.C) {
 }
 
 func (s *runnerCleanupSuite) TestExecGetsCloudVersions(c *check.C) {
+	s.options.Release = "1504"
 	err := s.subject.Exec(s.options)
 
 	c.Assert(err, check.IsNil)
@@ -353,6 +382,15 @@ func (s *runnerCreateSuite) TestExecDoesNotGetCloudVersionsOnNonCleanupAction(c 
 	c.Assert(err, check.NotNil)
 
 	c.Assert(len(s.cloudClient.getVersionsCalls), check.Equals, 0)
+}
+
+func (s *runnerCleanupSuite) TestExecGetVersionsReceivesReleaseWithoutDots(c *check.C) {
+	s.options.Release = "15.04"
+	s.subject.Exec(s.options)
+
+	key := getFakeKey("1504", s.options.Channel, s.options.Arch)
+	fmt.Println(s.cloudClient.getVersionsCalls)
+	c.Assert(s.cloudClient.getVersionsCalls[key], check.Equals, 1)
 }
 
 func (s *runnerCleanupSuite) TestExecReturnsGetVersionsError(c *check.C) {

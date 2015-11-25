@@ -22,6 +22,8 @@ package runner
 import (
 	"fmt"
 	"os"
+	"strconv"
+	"strings"
 
 	log "github.com/Sirupsen/logrus"
 
@@ -86,7 +88,9 @@ func (r *Runner) create(options *flags.Options) (err error) {
 		return &ErrVersion{siVersion, cloudVersion}
 	}
 	var path string
-	path, err = r.imgDriver.Create(options.Release, options.Channel, options.Arch, siVersion)
+	// dot is only added if the release is a number of four digits, like 1504
+	dotRelease := addDot(options.Release)
+	path, err = r.imgDriver.Create(dotRelease, options.Channel, options.Arch, siVersion)
 	defer os.Remove(path)
 	log.Infof("Creating image file in %s", path)
 	if err != nil {
@@ -107,13 +111,15 @@ func (r *Runner) getVersions(release, channel, arch string) (siVersion, cloudVer
 	versionChan := make(chan struct{}, 2)
 
 	go func() {
-		siVersion, siError = r.imgDataOrigin.GetLatestVersion(release, channel, arch)
+		dotRelease := addDot(release)
+		siVersion, siError = r.imgDataOrigin.GetLatestVersion(dotRelease, channel, arch)
 		log.Info("siVersion: ", siVersion)
 		versionChan <- struct{}{}
 	}()
 
 	go func() {
-		cloudVersion, cloudError = r.imgDataTarget.GetLatestVersion(release, channel, arch)
+		noDotRelease := strings.Replace(release, ".", "", 1)
+		cloudVersion, cloudError = r.imgDataTarget.GetLatestVersion(noDotRelease, channel, arch)
 		log.Info("cloudVersion: ", cloudVersion)
 		versionChan <- struct{}{}
 	}()
@@ -134,7 +140,8 @@ func (r *Runner) getVersions(release, channel, arch string) (siVersion, cloudVer
 }
 
 func (r *Runner) cleanup(options *flags.Options) (err error) {
-	imageList, err := r.imgDataTarget.GetVersions(options.Release, options.Channel, options.Arch)
+	noDotsRelease := strings.Replace(options.Release, ".", "", 1)
+	imageList, err := r.imgDataTarget.GetVersions(noDotsRelease, options.Channel, options.Arch)
 	if err != nil {
 		return
 	}
@@ -145,4 +152,13 @@ func (r *Runner) cleanup(options *flags.Options) (err error) {
 		err = r.imgDataTarget.Delete(imageList[imagesToKeep:]...)
 	}
 	return
+}
+
+func addDot(release string) string {
+	if len(release) == 4 {
+		if _, err := strconv.Atoi(release); err == nil {
+			return release[0:2] + "." + release[2:]
+		}
+	}
+	return release
 }
