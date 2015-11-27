@@ -38,11 +38,13 @@ const (
 	cloudVersionsError      = "error getting cloud versions"
 	cloudCreateError        = "error creating cloud image"
 	cloudDeleteError        = "error deleting cloud images"
+	cloudPurgeError         = "error purging cloud images"
 	udfCreateError          = "error creating image"
 )
 
 var _ = check.Suite(&runnerCreateSuite{})
 var _ = check.Suite(&runnerCleanupSuite{})
+var _ = check.Suite(&runnerPurgeSuite{})
 
 func Test(t *testing.T) { check.TestingT(t) }
 
@@ -55,6 +57,12 @@ type runnerCreateSuite struct {
 }
 
 type runnerCleanupSuite struct {
+	subject     *Runner
+	options     *flags.Options
+	cloudClient *fakeCloudClient
+}
+
+type runnerPurgeSuite struct {
 	subject     *Runner
 	options     *flags.Options
 	cloudClient *fakeCloudClient
@@ -80,10 +88,12 @@ type fakeCloudClient struct {
 	getVersionsCalls      map[string]int
 	createCalls           map[string]int
 	deleteCalls           map[string]int
+	purgeCalls            int
 	doVerErr              bool
 	doVerNotFoundErr      bool
 	doCreateErr           bool
 	doDeleteErr           bool
+	doPurgeErr            bool
 	version               int
 	versions              []string
 }
@@ -123,6 +133,14 @@ func (s *fakeCloudClient) Delete(versions ...string) (err error) {
 	s.deleteCalls[key]++
 	if s.doDeleteErr {
 		err = fmt.Errorf(cloudDeleteError)
+	}
+	return
+}
+
+func (s *fakeCloudClient) Purge() (err error) {
+	s.purgeCalls++
+	if s.doPurgeErr {
+		err = fmt.Errorf(cloudPurgeError)
 	}
 	return
 }
@@ -182,6 +200,19 @@ func (s *runnerCleanupSuite) SetUpTest(c *check.C) {
 	s.cloudClient.doDeleteErr = false
 	s.cloudClient.versions = []string{}
 	s.options.Action = "cleanup"
+}
+
+func (s *runnerPurgeSuite) SetUpSuite(c *check.C) {
+	s.cloudClient = &fakeCloudClient{}
+	s.subject = NewRunner(&fakeSiClient{}, s.cloudClient, &fakeImgDriver{})
+	s.options = &flags.Options{
+		Action: "purge", Release: "15.04", Channel: "edge", Arch: "amd64"}
+}
+
+func (s *runnerPurgeSuite) SetUpTest(c *check.C) {
+	s.cloudClient.purgeCalls = 0
+	s.cloudClient.doPurgeErr = false
+	s.options.Action = "purge"
 }
 
 func (s *runnerCreateSuite) TestExecCreateGetsSIVersion(c *check.C) {
@@ -451,6 +482,29 @@ func (s *runnerCleanupSuite) TestExecReturnsDeleteError(c *check.C) {
 
 	c.Assert(err, check.NotNil)
 	c.Assert(err.Error(), check.Equals, cloudDeleteError)
+}
+
+func (s *runnerPurgeSuite) TestExecCallsPurge(c *check.C) {
+	s.subject.Exec(s.options)
+
+	c.Assert(s.cloudClient.purgeCalls, check.Equals, 1)
+}
+
+func (s *runnerPurgeSuite) TestExecDoesNotCallPurgeOnNonPurgeAction(c *check.C) {
+	s.options.Action = "non-purge"
+
+	s.subject.Exec(s.options)
+
+	c.Assert(s.cloudClient.purgeCalls, check.Equals, 0)
+}
+
+func (s *runnerPurgeSuite) TestExecReturnsPurgeError(c *check.C) {
+	s.cloudClient.doPurgeErr = true
+
+	err := s.subject.Exec(s.options)
+
+	c.Assert(err, check.NotNil)
+	c.Assert(err.Error(), check.Equals, cloudPurgeError)
 }
 
 func getFakeKey(release, channel, arch string) string {

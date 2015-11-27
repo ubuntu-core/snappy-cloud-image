@@ -50,6 +50,7 @@ type PollsterWriter interface {
 	FullPollster
 	Create(filePath, release, channel, arch string, version int) (err error)
 	Delete(images ...string) (err error)
+	Purge() (err error)
 }
 
 // Driver defines the methods required for creating images

@@ -73,6 +73,8 @@ func (r *Runner) Exec(options *flags.Options) (err error) {
 		return r.create(options)
 	} else if options.Action == "cleanup" {
 		return r.cleanup(options)
+	} else if options.Action == "purge" {
+		return r.purge()
 	}
 	return &ErrActionUnknown{action: options.Action}
 }
@@ -161,4 +163,8 @@ func addDot(release string) string {
 		}
 	}
 	return release
+}
+
+func (r *Runner) purge() (err error) {
+	return r.imgDataTarget.Purge()
 }

@@ -35,9 +35,11 @@ import (
 )
 
 const (
-	imageNamePrefixPattern = "ubuntu-core/custom/ubuntu-%s-snappy-core-%s-%s"
+	baseImageName          = "ubuntu-core/custom/ubuntu-"
+	imageNamePrefixPattern = baseImageName + "%s-snappy-core-%s-%s"
 	imageNameSufix         = "disk1.img"
 	errVerNotFoundPattern  = "Version not found for release %s, channel %s and arch %s"
+	imageListCmd           = "openstack image list --property status=active"
 )
 
 // Client is the implementation of Clouder that interacts with the provider
@@ -91,12 +93,26 @@ func (c *Client) Create(path, release, channel, arch string, version int) (err e
 // extractVersionsFromList returns a list of image names that match the given
 // release, channel and arch sorted in descendant version number order
 func (c *Client) extractVersionsFromList(release, channel, arch string) ([]string, error) {
+	var imageIDs sort.StringSlice
+	imageIDs, err := c.getImageList(imgTemplate(release, channel, arch))
+	if err != nil {
+		return imageIDs, err
+	}
+	if len(imageIDs) > 0 {
+		sort.Sort(sort.Reverse(imageIDs[:]))
+		return imageIDs, nil
+	}
+	return []string{}, NewErrVersionNotFound(release, channel, arch)
+}
+
+// getImageList returns a list of image IDs that match a given pattern
+func (c *Client) getImageList(pattern string) (imagelist []string, err error) {
 	/* list is of the form:
 	| 08763be0-3b3d-41e3-b5b0-08b9006fc1d7 | smoser-lucid-loader/lucid-amd64-linux-image-2.6.32-34-virtual-v-2.6.32-34.77~smloader0-build0-loader |
 	| 842949c6-225b-4ad0-81b7-98de2b818eed | smoser-lucid-loader/lucid-amd64-linux-image-2.6.32-34-virtual-v-2.6.32-34.77~smloader0-kernel        |
 	| 762d5ce2-fbc2-4685-8d6c-71249d19df9e | ubuntu-core/custom/ubuntu-1504-snappy-core-amd64-edge-202-disk1.img                                  |
 	*/
-	list, err := c.cli.ExecCommand("openstack", "image", "list", "--property", "status=active")
+	list, err := c.cli.ExecCommand(strings.Fields(imageListCmd)...)
 	if err != nil {
 		return []string{}, err
 	}
@@ -104,9 +120,7 @@ func (c *Client) extractVersionsFromList(release, channel, arch string) ([]strin
 	reader := strings.NewReader(list)
 	scanner := bufio.NewScanner(reader)
 
-	pattern := imgTemplate(release, channel, arch)
-
-	var imageIDs sort.StringSlice = []string{}
+	var imageIDs []string
 	for scanner.Scan() {
 		line := scanner.Text()
 		if strings.Contains(line, pattern) {
@@ -114,11 +128,7 @@ func (c *Client) extractVersionsFromList(release, channel, arch string) ([]strin
 			imageIDs = append(imageIDs, fields[3])
 		}
 	}
-	if len(imageIDs) > 0 {
-		sort.Sort(sort.Reverse(imageIDs[:]))
-		return imageIDs, nil
-	}
-	return []string{}, NewErrVersionNotFound(release, channel, arch)
+	return imageIDs, nil
 }
 
 func imgTemplate(release, channel, arch string) (pattern string) {
@@ -141,11 +151,23 @@ func GetImageID(release, channel, arch string, version int) (name string) {
 
 // Delete calls the cli command to remove the given images
 func (c *Client) Delete(images ...string) (err error) {
-	_, err = c.cli.ExecCommand(append([]string{"openstack", "delete"}, images...)...)
+	_, err = c.cli.ExecCommand(append([]string{"openstack", "image", "delete"}, images...)...)
 	return
 }
 
 // GetVersions returns a descending ordered list (newer first) of image names for the given parameters
 func (c *Client) GetVersions(release, channel, arch string) (imageNames []string, err error) {
 	return c.extractVersionsFromList(release, channel, arch)
+}
+
+// Purge asks the glance endpoint to remove all the custom images present.
+// Use with care! For example it can be useful when deploying a new jenkins,
+// the instances from images created with the previous one won't be accessible
+// any more
+func (c *Client) Purge() error {
+	images, err := c.getImageList(baseImageName)
+	if err != nil {
+		return err
+	}
+	return c.Delete(images...)
 }

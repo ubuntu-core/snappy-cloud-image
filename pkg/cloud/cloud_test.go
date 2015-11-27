@@ -84,7 +84,7 @@ func (s *cloudSuite) SetUpSuite(c *check.C) {
 
 func (s *cloudSuite) SetUpTest(c *check.C) {
 	s.cli.execCommandCalls = make(map[string]int)
-	s.cli.output = ""
+	s.cli.output = fmt.Sprintf(baseResponse, testDefaultRelease, testDefaultArch, testDefaultChannel, 100)
 	s.cli.err = false
 }
 
@@ -205,9 +205,9 @@ func (s *cloudSuite) TestDeleteCallsCli(c *check.C) {
 		images       []string
 		expectedCall string
 	}{
-		{[]string{"version1", "version2"}, "openstack delete version1 version2"},
-		{[]string{"version2", "version1"}, "openstack delete version2 version1"},
-		{[]string{"version2", "version1", "version3", "version4"}, "openstack delete version2 version1 version3 version4"},
+		{[]string{"version1", "version2"}, "openstack image delete version1 version2"},
+		{[]string{"version2", "version1"}, "openstack image delete version2 version1"},
+		{[]string{"version2", "version1", "version3", "version4"}, "openstack image delete version2 version1 version3 version4"},
 	}
 	for _, item := range testCases {
 		s.subject.Delete(item.images...)
@@ -263,9 +263,70 @@ func (s *cloudSuite) TestGetVersionsReturnsImageNames(c *check.C) {
 }
 
 func (s *cloudSuite) TestGetVersionsQueriesGlance(c *check.C) {
-	s.subject.GetVersions(testDefaultRelease, testDefaultChannel, testDefaultArch)
+	_, err := s.subject.GetVersions(testDefaultRelease, testDefaultChannel, testDefaultArch)
 
-	c.Assert(s.cli.execCommandCalls["openstack image list --property status=active"], check.Equals, 1)
+	c.Assert(err, check.IsNil)
+	c.Assert(s.cli.execCommandCalls[imageListCmd], check.Equals, 1)
+}
+
+func (s *cloudSuite) TestGetVersionsReturnsGlanceError(c *check.C) {
+	s.cli.err = true
+
+	_, err := s.subject.GetVersions(testDefaultRelease, testDefaultChannel, testDefaultArch)
+
+	c.Assert(err, check.NotNil)
+}
+
+func (s *cloudSuite) TestPurgeCallsCliForListing(c *check.C) {
+	s.subject.Purge()
+
+	c.Assert(s.cli.execCommandCalls[imageListCmd], check.Equals, 1)
+}
+
+func (s *cloudSuite) TestPurgeReturnsListingError(c *check.C) {
+	s.cli.err = true
+	err := s.subject.Purge()
+
+	c.Assert(err, check.NotNil)
+}
+
+func (s *cloudSuite) TestPurgeCallsCliForDeleting(c *check.C) {
+	version := 100
+	versionLine := fmt.Sprintf(baseResponse, testDefaultRelease, testDefaultArch, testDefaultChannel, version)
+	versionID := getIDFromGlanceResponse(versionLine)
+	versionPlusOneLine := fmt.Sprintf(baseResponse, testDefaultRelease+"-plusOneRelease", testDefaultArch, testDefaultChannel+"-plusOneChannel", version+1)
+	versionPlusOneID := getIDFromGlanceResponse(versionPlusOneLine)
+	versionPlusTwoLine := fmt.Sprintf(baseResponse, testDefaultRelease+"-plusTwoRelease", testDefaultArch, testDefaultChannel+"-plusTwoRelease", version+2)
+	versionPlusTwoID := getIDFromGlanceResponse(versionPlusTwoLine)
+
+	testCases := []struct {
+		glanceOutput       string
+		expectedImageNames []string
+	}{
+		{fmt.Sprintf(baseCompleteResponse, "", "", "", ""),
+			[]string{}},
+		{fmt.Sprintf(baseCompleteResponse, versionLine, "", "", ""),
+			[]string{versionID}},
+		{fmt.Sprintf(baseCompleteResponse, versionLine, versionPlusOneLine, "", ""),
+			[]string{versionID, versionPlusOneID}},
+		{fmt.Sprintf(baseCompleteResponse, versionPlusOneLine, versionLine, "", ""),
+			[]string{versionPlusOneID, versionID}},
+		{fmt.Sprintf(baseCompleteResponse, versionPlusOneLine, versionLine, "", versionPlusTwoLine),
+			[]string{versionPlusOneID, versionID, versionPlusTwoID}},
+		{fmt.Sprintf(baseCompleteResponse, versionPlusOneLine, versionPlusTwoLine, versionLine, versionPlusOneLine),
+			[]string{versionPlusOneID, versionPlusTwoID, versionID, versionPlusOneID}},
+	}
+	for _, item := range testCases {
+		s.cli.output = item.glanceOutput
+
+		s.subject.Purge()
+
+		expectedCall := strings.Join(append([]string{"openstack image delete"}, item.expectedImageNames...), " ")
+		c.Check(s.cli.execCommandCalls[expectedCall], check.Equals, 1)
+	}
+}
+
+func (s *cloudSuite) TestPurgeReturnsCliError(c *check.C) {
 }
 
 func getIDFromGlanceResponse(response string) string {
