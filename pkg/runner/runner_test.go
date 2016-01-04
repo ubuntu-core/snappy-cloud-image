@@ -151,8 +151,8 @@ type fakeImgDriver struct {
 	doErr       bool
 }
 
-func (s *fakeImgDriver) Create(release, channel, arch string, version int) (path string, err error) {
-	key := getCreateKey(release, channel, arch, version)
+func (s *fakeImgDriver) Create(options *flags.Options, version int) (path string, err error) {
+	key := getCreateKey(options.Release, options.Channel, options.Arch, version)
 	s.createCalls[key]++
 	if s.doErr {
 		err = fmt.Errorf(udfCreateError)
@@ -241,15 +241,6 @@ func (s *runnerCreateSuite) TestExecReturnsGetSIVersionError(c *check.C) {
 	c.Assert(err.Error(), check.Equals, siVersionError)
 }
 
-func (s *runnerCreateSuite) TestExecGetSIVersionReceivesReleaseWithDot(c *check.C) {
-	s.options.Release = "1504"
-
-	s.subject.Exec(s.options)
-
-	key := getFakeKey("15.04", s.options.Channel, s.options.Arch)
-	c.Assert(s.siClient.getVersionCalls[key], check.Equals, 1)
-}
-
 func (s *runnerCreateSuite) TestExecGetsCloudLatestVersion(c *check.C) {
 	s.options.Release = "1504"
 	err := s.subject.Exec(s.options)
@@ -257,14 +248,6 @@ func (s *runnerCreateSuite) TestExecGetsCloudLatestVersion(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	key := getFakeKey(s.options.Release, s.options.Channel, s.options.Arch)
-	c.Assert(s.cloudClient.getLatestVersionCalls[key], check.Equals, 1)
-}
-
-func (s *runnerCreateSuite) TestExecGetCloudLatestVersionReceivesReleaseWithoutDot(c *check.C) {
-	s.options.Release = "15.04"
-	s.subject.Exec(s.options)
-
-	key := getFakeKey("1504", s.options.Channel, s.options.Arch)
 	c.Assert(s.cloudClient.getLatestVersionCalls[key], check.Equals, 1)
 }
 
@@ -327,15 +310,6 @@ func (s *runnerCreateSuite) TestExecDoesNotCallDriverCreateOnNonCreateAction(c *
 	c.Assert(err, check.NotNil)
 
 	c.Assert(len(s.udfDriver.createCalls), check.Equals, 0)
-}
-
-func (s *runnerCreateSuite) TestExecDriverCreateReceivesReleaseWithDot(c *check.C) {
-	s.options.Release = "1504"
-
-	s.subject.Exec(s.options)
-
-	key := getCreateKey("15.04", s.options.Channel, s.options.Arch, s.siClient.version)
-	c.Assert(s.udfDriver.createCalls[key], check.Equals, 1)
 }
 
 func (s *runnerCreateSuite) TestExecReturnsDriverCreateError(c *check.C) {

@@ -17,7 +17,7 @@
  *
  */
 
-// Package image knows how to crete the requested images using UDF.
+// Package image knows how to create the requested images using UDF.
 // It also defines the required interfaces standarize the query and creation
 // of images
 package image
@@ -30,9 +30,13 @@ import (
 	log "github.com/Sirupsen/logrus"
 
 	"github.com/ubuntu-core/snappy-cloud-image/pkg/cli"
+	"github.com/ubuntu-core/snappy-cloud-image/pkg/flags"
 )
 
-const outputFileName = "udf.img"
+const (
+	rawOutputFileName = "udf.raw"
+	outputFileName    = "udf.img"
+)
 
 // Pollster holds the methods for querying an image backend
 type Pollster interface {
@@ -55,37 +59,53 @@ type PollsterWriter interface {
 
 // Driver defines the methods required for creating images
 type Driver interface {
-	Create(release, channel, arch string, ver int) (path string, err error)
+	Create(options *flags.Options, ver int) (path string, err error)
 }
 
-// UDF is a concrete implementation of Driver
-type UDF struct {
+// UDFQcow2 is a concrete implementation of Driver
+type UDFQcow2 struct {
 	cli cli.Commander
 }
 
-// NewUDF is the UDF constructor
-func NewUDF(cli cli.Commander) *UDF {
-	return &UDF{cli: cli}
+// NewUDFQcow2 is the UDFQcow2 constructor
+func NewUDFQcow2(cli cli.Commander) *UDFQcow2 {
+	return &UDFQcow2{cli: cli}
 }
 
-// Create makes the required call to UDF to
-func (u *UDF) Create(release, channel, arch string, ver int) (path string, err error) {
+// Create makes the required call to UDF to create the raw image, and then transforms
+// it to the QCOW2 format
+func (u *UDFQcow2) Create(options *flags.Options, ver int) (path string, err error) {
 	tmpDirName, err := u.cli.ExecCommand("mktemp", "-d")
 	if err != nil {
 		return
 	}
-	tmpFileName := filepath.Join(strings.TrimSpace(tmpDirName), outputFileName)
-	log.Debug("Target image filename: ", tmpFileName)
+	rawTmpFileName := filepath.Join(strings.TrimSpace(tmpDirName), rawOutputFileName)
+	log.Debug("Target image filename: ", rawTmpFileName)
 
 	var archFlag string
-	if arch == "arm" {
+	if options.Arch == "arm" {
 		archFlag = "--oem beagleblack"
 	}
-	cmds := []string{"sudo", "ubuntu-device-flash", "--revision=" + strconv.Itoa(ver), "core", release,
-		"--channel", channel, "--developer-mode",
-		archFlag, "-o", tmpFileName}
+	cmds := []string{"sudo", "ubuntu-device-flash", "--revision=" + strconv.Itoa(ver), "core", options.Release,
+		"--channel", options.Channel, "--developer-mode",
+		archFlag, "-o", rawTmpFileName}
+
 	log.Debug("Executing command ", strings.Join(cmds, " "))
-	_, err = u.cli.ExecCommand(cmds...)
+	output, err := u.cli.ExecCommand(cmds...)
+	log.Debug(output)
+
+	if err != nil {
+		return
+	}
+
+	log.Debug("Converting to QCOW2 format")
+	tmpFileName := filepath.Join(strings.TrimSpace(tmpDirName), outputFileName)
+	cmds = []string{"/usr/bin/qemu-img",
+		"convert", "-O", "qcow2",
+		"-o", "compat=" + options.Qcow2compat,
+		rawTmpFileName, tmpFileName}
+	output, err = u.cli.ExecCommand(cmds...)
+	log.Debug(output)
 
 	return tmpFileName, err
 }

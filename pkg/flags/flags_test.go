@@ -79,6 +79,12 @@ func (s *flagsSuite) TestParseDefaultLoglevel(c *check.C) {
 	c.Assert(parsedFlags.LogLevel, check.Equals, defaultLogLevel)
 }
 
+func (s *flagsSuite) TestParseDefaultQcow2compat(c *check.C) {
+	parsedFlags := Parse()
+
+	c.Assert(parsedFlags.Qcow2compat, check.Equals, defaultQcow2compat)
+}
+
 func (s *flagsSuite) TestParseSetsActionToFlagValue(c *check.C) {
 	os.Args = []string{"", "-action", "myaction"}
 	parsedFlags := Parse()
@@ -91,6 +97,24 @@ func (s *flagsSuite) TestParseSetsReleaseToFlagValue(c *check.C) {
 	parsedFlags := Parse()
 
 	c.Assert(parsedFlags.Release, check.Equals, "myrelease")
+}
+
+func (s *flagsSuite) TestParseSetsReleaseToFlagValueAddingDots(c *check.C) {
+	os.Args = []string{"", "-release", "1504"}
+	parsedFlags := Parse()
+	c.Assert(parsedFlags.Release, check.Equals, "15.04")
+}
+
+func (s *flagsSuite) TestParseSetsReleaseToFlagValueAddingDotsWithLeadingZeros(c *check.C) {
+	os.Args = []string{"", "-release", "0023"}
+	parsedFlags := Parse()
+	c.Assert(parsedFlags.Release, check.Equals, "00.23")
+}
+
+func (s *flagsSuite) TestParseSetsReleaseToFlagValueNotAddingDotsForLongNumbers(c *check.C) {
+	os.Args = []string{"", "-release", "12345"}
+	parsedFlags := Parse()
+	c.Assert(parsedFlags.Release, check.Equals, "12345")
 }
 
 func (s *flagsSuite) TestParseSetsChannelToFlagValue(c *check.C) {
@@ -112,6 +136,13 @@ func (s *flagsSuite) TestParseSetsLogLevelToFlagValue(c *check.C) {
 	parsedFlags := Parse()
 
 	c.Assert(parsedFlags.LogLevel, check.Equals, "myloglevel")
+}
+
+func (s *flagsSuite) TestParseSetsQcow2compatToFlagValue(c *check.C) {
+	os.Args = []string{"", "-qcow2compat", "myqcow2compat"}
+	parsedFlags := Parse()
+
+	c.Assert(parsedFlags.Qcow2compat, check.Equals, "myqcow2compat")
 }
 
 // from flag.ResetForTesting

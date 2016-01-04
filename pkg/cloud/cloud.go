@@ -86,13 +86,14 @@ func (c *Client) Create(path, release, channel, arch string, version int) (err e
 
 	log.Debugf("Creating image %s from file %s", imageID, path)
 
-	_, err = c.cli.ExecCommand("openstack", "image", "create", "--file", path, imageID)
+	_, err = c.cli.ExecCommand("openstack", "image", "create", "--disk-format", "qcow2", "--file", path, imageID)
 	return
 }
 
 // extractVersionsFromList returns a list of image names that match the given
 // release, channel and arch sorted in descendant version number order
 func (c *Client) extractVersionsFromList(release, channel, arch string) ([]string, error) {
+	release = removeDot(release)
 	var imageIDs sort.StringSlice
 	imageIDs, err := c.getImageList(imgTemplate(release, channel, arch))
 	if err != nil {
@@ -145,6 +146,7 @@ func extractVersion(imageID string) (ver int, err error) {
 
 // GetImageID returns the image name for the given parameters
 func GetImageID(release, channel, arch string, version int) (name string) {
+	release = removeDot(release)
 	imageNamePrefix := fmt.Sprintf(imageNamePrefixPattern, release, arch, channel)
 	return fmt.Sprintf("%s-%d-%s", imageNamePrefix, version, imageNameSufix)
 }
@@ -170,4 +172,8 @@ func (c *Client) Purge() error {
 		return err
 	}
 	return c.Delete(images...)
+}
+
+func removeDot(in string) string {
+	return strings.Replace(in, ".", "", 1)
 }

@@ -26,13 +26,17 @@ import (
 	"testing"
 
 	"gopkg.in/check.v1"
+
+	"github.com/ubuntu-core/snappy-cloud-image/pkg/flags"
 )
 
 const (
-	testDefaultRelease = "rolling"
-	testDefaultChannel = "edge"
-	testDefaultArch    = "amd64"
-	tmpDirName         = "tmpdirname"
+	testDefaultRelease     = "rolling"
+	testDefaultChannel     = "edge"
+	testDefaultArch        = "amd64"
+	testDefaultQcow2compat = "1.1"
+	testDefaultVer         = 100
+	tmpDirName             = "tmpdirname"
 )
 
 var _ = check.Suite(&imageSuite{})
@@ -40,38 +44,51 @@ var _ = check.Suite(&imageSuite{})
 func Test(t *testing.T) { check.TestingT(t) }
 
 type imageSuite struct {
-	subject Driver
-	cli     *fakeCliCommander
+	subject        Driver
+	cli            *fakeCliCommander
+	defaultOptions *flags.Options
 }
 
 type fakeCliCommander struct {
-	execCommandCalls map[string]int
-	err              bool
-	output           string
+	execCommandCalls         map[string]int
+	err                      bool
+	correctCalls, totalCalls int
+	output                   string
 }
 
 func (f *fakeCliCommander) ExecCommand(cmds ...string) (output string, err error) {
 	f.execCommandCalls[strings.Join(cmds, " ")]++
+	f.totalCalls++
 	if f.err {
-		err = fmt.Errorf("exec error")
+		if f.totalCalls > f.correctCalls {
+			err = fmt.Errorf("exec error")
+		}
 	}
 	return f.output, err
 }
 
 func (s *imageSuite) SetUpSuite(c *check.C) {
 	s.cli = &fakeCliCommander{}
-	s.subject = NewUDF(s.cli)
+	s.subject = NewUDFQcow2(s.cli)
+	s.defaultOptions = &flags.Options{
+		Release:     testDefaultRelease,
+		Channel:     testDefaultChannel,
+		Arch:        testDefaultArch,
+		Qcow2compat: testDefaultQcow2compat,
+	}
 }
 
 func (s *imageSuite) SetUpTest(c *check.C) {
 	s.cli.execCommandCalls = make(map[string]int)
 	s.cli.err = false
+	s.cli.correctCalls = 0
+	s.cli.totalCalls = 0
 	s.cli.output = ""
 }
 
 func (s *imageSuite) TestCreateCallsUDF(c *check.C) {
 	s.cli.output = tmpDirName
-	filename := tmpFileName()
+	filename := tmpRawFileName()
 	testCases := []struct {
 		release, channel, arch string
 		version                int
@@ -84,7 +101,13 @@ func (s *imageSuite) TestCreateCallsUDF(c *check.C) {
 
 	for _, item := range testCases {
 		s.cli.execCommandCalls = make(map[string]int)
-		_, err := s.subject.Create(item.release, item.channel, item.arch, item.version)
+		options := &flags.Options{
+			Release:     item.release,
+			Channel:     item.channel,
+			Arch:        item.arch,
+			Qcow2compat: testDefaultQcow2compat,
+		}
+		_, err := s.subject.Create(options, item.version)
 
 		c.Check(err, check.IsNil)
 
@@ -93,28 +116,65 @@ func (s *imageSuite) TestCreateCallsUDF(c *check.C) {
 	}
 }
 
+func (s *imageSuite) TestCreateDoesNotCallUDFOnMktempError(c *check.C) {
+	s.cli.err = true
+	s.cli.output = tmpDirName
+	filename := tmpRawFileName()
+
+	s.subject.Create(s.defaultOptions, testDefaultVer)
+
+	expectedCall := fmt.Sprintf("sudo ubuntu-device-flash --revision=%d core %s --channel %s --developer-mode  -o %s",
+		100, testDefaultRelease, testDefaultChannel, filename)
+
+	c.Assert(s.cli.execCommandCalls[expectedCall], check.Equals, 0)
+}
+
 func (s *imageSuite) TestCreateReturnsUDFError(c *check.C) {
 	s.cli.err = true
+	s.cli.correctCalls = 1
 
-	_, err := s.subject.Create(testDefaultRelease, testDefaultChannel, testDefaultArch, 100)
+	_, err := s.subject.Create(s.defaultOptions, testDefaultVer)
 
 	c.Assert(err, check.NotNil)
 }
 
 func (s *imageSuite) TestCreateReturnsCreatedFilePath(c *check.C) {
 	s.cli.output = tmpDirName
-	path, err := s.subject.Create(testDefaultRelease, testDefaultChannel, testDefaultArch, 100)
+	path, err := s.subject.Create(s.defaultOptions, testDefaultVer)
 	c.Assert(err, check.IsNil)
 
-	c.Assert(path, check.Not(check.Equals), "")
 	c.Assert(path, check.Equals, tmpFileName())
 }
 
 func (s *imageSuite) TestCreateUsesTmpFileName(c *check.C) {
-	_, err := s.subject.Create(testDefaultRelease, testDefaultChannel, testDefaultArch, 100)
+	_, err := s.subject.Create(s.defaultOptions, testDefaultVer)
 
 	c.Assert(s.cli.execCommandCalls["mktemp -d"], check.Equals, 1)
 	c.Assert(err, check.IsNil)
+}
+
+func (s *imageSuite) TestCreateTransformsToQCOW2(c *check.C) {
+	s.cli.output = tmpDirName
+	rawFilename := tmpRawFileName()
+	filename := tmpFileName()
+
+	s.subject.Create(s.defaultOptions, testDefaultVer)
+
+	expectedCall := getExpectedCall(testDefaultQcow2compat, rawFilename, filename)
+	c.Assert(s.cli.execCommandCalls[expectedCall], check.Equals, 1)
+}
+
+func (s *imageSuite) TestCreateDoesNotTransformToQCOW2OnUDFError(c *check.C) {
+	s.cli.err = true
+	s.cli.correctCalls = 1
+	s.cli.output = tmpDirName
+	rawFilename := tmpRawFileName()
+	filename := tmpFileName()
+
+	s.subject.Create(s.defaultOptions, testDefaultVer)
+
+	expectedCall := getExpectedCall(testDefaultQcow2compat, rawFilename, filename)
+	c.Assert(s.cli.execCommandCalls[expectedCall], check.Equals, 0)
 }
 
 func extractKey(m map[string]int, order int) string {
@@ -125,6 +185,15 @@ func extractKey(m map[string]int, order int) string {
 	return keys[order]
 }
 
+func tmpRawFileName() string {
+	return filepath.Join(tmpDirName, rawOutputFileName)
+}
+
 func tmpFileName() string {
 	return filepath.Join(tmpDirName, outputFileName)
+}
+
+func getExpectedCall(compat, inputFile, outputFile string) string {
+	return fmt.Sprintf("/usr/bin/qemu-img convert -O qcow2 -o compat=%s %s %s",
+		compat, inputFile, outputFile)
 }

@@ -157,6 +157,15 @@ func (s *cloudSuite) TestGetLatestVersionReturnsVersionNotFoundError(c *check.C)
 		fmt.Sprintf(errVerNotFoundPattern, testDefaultRelease, testDefaultChannel, testDefaultArch))
 }
 
+func (s *cloudSuite) TestGetLatestVersionRemovesDotFromRelease(c *check.C) {
+	expectedVersion := 100
+	versionLine := fmt.Sprintf(baseResponse, "1604", testDefaultArch, testDefaultChannel, expectedVersion)
+	s.cli.output = fmt.Sprintf(baseCompleteResponse, versionLine, "", "", "")
+	version, _ := s.subject.GetLatestVersion("16.04", testDefaultChannel, testDefaultArch)
+
+	c.Assert(version, check.Equals, expectedVersion)
+}
+
 func (s *cloudSuite) TestCreateCallsGlance(c *check.C) {
 	path := "mypath"
 	version := 100
@@ -166,7 +175,7 @@ func (s *cloudSuite) TestCreateCallsGlance(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	imageNamePrefix := fmt.Sprintf(imageNamePrefixPattern, testDefaultRelease, testDefaultArch, testDefaultChannel)
-	expectedCall := fmt.Sprintf("openstack image create --file %s %s-%d-%s", path, imageNamePrefix, version, imageNameSufix)
+	expectedCall := fmt.Sprintf("openstack image create --disk-format qcow2 --file %s %s-%d-%s", path, imageNamePrefix, version, imageNameSufix)
 
 	c.Assert(s.cli.execCommandCalls[expectedCall], check.Equals, 1)
 }
@@ -191,9 +200,9 @@ func (s *cloudSuite) TestGetImageID(c *check.C) {
 		{"rolling", "edge", "amd64", 100, "ubuntu-core/custom/ubuntu-rolling-snappy-core-amd64-edge-100-disk1.img"},
 		{"rolling", "stable", "amd64", 10, "ubuntu-core/custom/ubuntu-rolling-snappy-core-amd64-stable-10-disk1.img"},
 		{"rolling", "alpha", "amd64", 210, "ubuntu-core/custom/ubuntu-rolling-snappy-core-amd64-alpha-210-disk1.img"},
-		{"1504", "edge", "amd64", 54, "ubuntu-core/custom/ubuntu-1504-snappy-core-amd64-edge-54-disk1.img"},
+		{"15.04", "edge", "amd64", 54, "ubuntu-core/custom/ubuntu-1504-snappy-core-amd64-edge-54-disk1.img"},
 		{"1504", "stable", "amd64", 23, "ubuntu-core/custom/ubuntu-1504-snappy-core-amd64-stable-23-disk1.img"},
-		{"1504", "alpha", "amd64", 2105, "ubuntu-core/custom/ubuntu-1504-snappy-core-amd64-alpha-2105-disk1.img"},
+		{"15.04", "alpha", "amd64", 2105, "ubuntu-core/custom/ubuntu-1504-snappy-core-amd64-alpha-2105-disk1.img"},
 	}
 	for _, item := range testCases {
 		c.Assert(GetImageID(item.release, item.channel, item.arch, item.version), check.Equals, item.expectedID)
@@ -275,6 +284,17 @@ func (s *cloudSuite) TestGetVersionsReturnsGlanceError(c *check.C) {
 	_, err := s.subject.GetVersions(testDefaultRelease, testDefaultChannel, testDefaultArch)
 
 	c.Assert(err, check.NotNil)
+}
+
+func (s *cloudSuite) TestGetLatestVersionsRemovesDotFromRelease(c *check.C) {
+	version := 100
+	versionLine := fmt.Sprintf(baseResponse, "1604", testDefaultArch, testDefaultChannel, version)
+	s.cli.output = fmt.Sprintf(baseCompleteResponse, versionLine, "", "", "")
+	list, _ := s.subject.GetVersions("16.04", testDefaultChannel, testDefaultArch)
+
+	expected := getIDFromGlanceResponse(versionLine)
+
+	c.Assert(testEq(list, []string{expected}), check.Equals, true)
 }
 
 func (s *cloudSuite) TestPurgeCallsCliForListing(c *check.C) {
