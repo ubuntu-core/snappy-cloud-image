@@ -22,7 +22,6 @@ package runner
 import (
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
@@ -32,7 +31,7 @@ import (
 	"github.com/ubuntu-core/snappy-cloud-image/pkg/image"
 )
 
-const imagesToKeep = 5
+const imagesToKeep = 3
 
 // Runner is the main type of the package
 type Runner struct {
@@ -89,21 +88,21 @@ func (r *Runner) create(options *flags.Options) (err error) {
 	if siVersion <= cloudVersion {
 		return &ErrVersion{siVersion, cloudVersion}
 	}
+
 	var path string
-	// dot is only added if the release is a number of four digits, like 1504
-	dotRelease := addDot(options.Release)
-	path, err = r.imgDriver.Create(dotRelease, options.Channel, options.Arch, siVersion)
+	path, err = r.imgDriver.Create(options, siVersion)
 	defer os.Remove(path)
 	log.Infof("Creating image file in %s", path)
 	if err != nil {
 		return
 	}
+
 	log.Infof("Uploading %s", path)
 	err = r.imgDataTarget.Create(path, options.Release, options.Channel, options.Arch, siVersion)
 	if err != nil {
 		return
 	}
-	log.Infof("Finished", path)
+	log.Info("Finished", path)
 	return
 
 }
@@ -113,15 +112,13 @@ func (r *Runner) getVersions(release, channel, arch string) (siVersion, cloudVer
 	versionChan := make(chan struct{}, 2)
 
 	go func() {
-		dotRelease := addDot(release)
-		siVersion, siError = r.imgDataOrigin.GetLatestVersion(dotRelease, channel, arch)
+		siVersion, siError = r.imgDataOrigin.GetLatestVersion(release, channel, arch)
 		log.Info("siVersion: ", siVersion)
 		versionChan <- struct{}{}
 	}()
 
 	go func() {
-		noDotRelease := strings.Replace(release, ".", "", 1)
-		cloudVersion, cloudError = r.imgDataTarget.GetLatestVersion(noDotRelease, channel, arch)
+		cloudVersion, cloudError = r.imgDataTarget.GetLatestVersion(release, channel, arch)
 		log.Info("cloudVersion: ", cloudVersion)
 		versionChan <- struct{}{}
 	}()
@@ -145,24 +142,16 @@ func (r *Runner) cleanup(options *flags.Options) (err error) {
 	noDotsRelease := strings.Replace(options.Release, ".", "", 1)
 	imageList, err := r.imgDataTarget.GetVersions(noDotsRelease, options.Channel, options.Arch)
 	if err != nil {
+		log.Info("Error getting image list")
 		return
 	}
 	if len(imageList) > imagesToKeep {
 		// assumes that imageList is sorted in descending order,
 		// the last items in the list will be the older ones
-		log.Infof("Removing images", imageList[imagesToKeep:])
+		log.Infof("Removing images %s", imageList[imagesToKeep:])
 		err = r.imgDataTarget.Delete(imageList[imagesToKeep:]...)
 	}
 	return
-}
-
-func addDot(release string) string {
-	if len(release) == 4 {
-		if _, err := strconv.Atoi(release); err == nil {
-			return release[0:2] + "." + release[2:]
-		}
-	}
-	return release
 }
 
 func (r *Runner) purge() (err error) {

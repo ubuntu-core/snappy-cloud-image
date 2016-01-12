@@ -41,7 +41,7 @@ func main() {
 
 	imgDataOrigin := si.NewClient(httpClient)
 	imgDataTarget := cloud.NewClient(cliExecutor)
-	imgDriver := image.NewUDF(cliExecutor)
+	imgDriver := image.NewUDFQcow2(cliExecutor)
 
 	runner := runner.NewRunner(imgDataOrigin, imgDataTarget, imgDriver)
 	if err := runner.Exec(parsedFlags); err != nil {
