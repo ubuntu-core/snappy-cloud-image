@@ -86,8 +86,14 @@ func (u *UDFQcow2) Create(options *flags.Options, ver int) (path string, err err
 	if options.Arch == "arm" {
 		archFlag = "--oem beagleblack"
 	}
-	cmds := []string{"sudo", "ubuntu-device-flash", "--revision=" + strconv.Itoa(ver), "core", options.Release,
-		"--channel", options.Channel, "--developer-mode",
+	cmds := []string{"sudo", "ubuntu-device-flash",
+		"--revision=" + strconv.Itoa(ver),
+		"core", options.Release,
+		"--channel", options.Channel,
+		"--os", options.OS,
+		"--kernel", options.Kernel,
+		"--gadget", options.Gadget,
+		"--developer-mode",
 		archFlag, "-o", rawTmpFileName}
 
 	log.Debug("Executing command ", strings.Join(cmds, " "))

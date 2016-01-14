@@ -35,6 +35,9 @@ const (
 	testDefaultChannel     = "edge"
 	testDefaultArch        = "amd64"
 	testDefaultQcow2compat = "1.1"
+	testDefaultOS          = "myos"
+	testDefaultKernel      = "mykernel"
+	testDefaultGadget      = "mygadget"
 	testDefaultVer         = 100
 	tmpDirName             = "tmpdirname"
 )
@@ -75,6 +78,9 @@ func (s *imageSuite) SetUpSuite(c *check.C) {
 		Channel:     testDefaultChannel,
 		Arch:        testDefaultArch,
 		Qcow2compat: testDefaultQcow2compat,
+		OS:          testDefaultOS,
+		Kernel:      testDefaultKernel,
+		Gadget:      testDefaultGadget,
 	}
 }
 
@@ -90,13 +96,13 @@ func (s *imageSuite) TestCreateCallsUDF(c *check.C) {
 	s.cli.output = tmpDirName
 	filename := tmpRawFileName()
 	testCases := []struct {
-		release, channel, arch string
-		version                int
-		expectedCall           string
+		release, channel, arch, os, kernel, gadget string
+		version                                    int
+		expectedCall                               string
 	}{
-		{"15.04", "edge", "amd64", 100, "sudo ubuntu-device-flash --revision=100 core 15.04 --channel edge --developer-mode  -o " + filename},
-		{"rolling", "stable", "amd64", 100, "sudo ubuntu-device-flash --revision=100 core rolling --channel stable --developer-mode  -o " + filename},
-		{"15.04", "alpha", "arm", 56, "sudo ubuntu-device-flash --revision=56 core 15.04 --channel alpha --developer-mode --oem beagleblack -o " + filename},
+		{"15.04", "edge", "amd64", "os1", "kernel1", "gadget1", 100, "sudo ubuntu-device-flash --revision=100 core 15.04 --channel edge --os os1 --kernel kernel1 --gadget gadget1 --developer-mode  -o " + filename},
+		{"rolling", "stable", "amd64", "os2", "kernel2", "gadget2", 100, "sudo ubuntu-device-flash --revision=100 core rolling --channel stable --os os2 --kernel kernel2 --gadget gadget2 --developer-mode  -o " + filename},
+		{"15.04", "alpha", "arm", "os3", "kernel3", "gadget3", 56, "sudo ubuntu-device-flash --revision=56 core 15.04 --channel alpha --os os3 --kernel kernel3 --gadget gadget3 --developer-mode --oem beagleblack -o " + filename},
 	}
 
 	for _, item := range testCases {
@@ -106,6 +112,9 @@ func (s *imageSuite) TestCreateCallsUDF(c *check.C) {
 			Channel:     item.channel,
 			Arch:        item.arch,
 			Qcow2compat: testDefaultQcow2compat,
+			OS:          item.os,
+			Kernel:      item.kernel,
+			Gadget:      item.gadget,
 		}
 		_, err := s.subject.Create(options, item.version)
 
@@ -123,8 +132,8 @@ func (s *imageSuite) TestCreateDoesNotCallUDFOnMktempError(c *check.C) {
 
 	s.subject.Create(s.defaultOptions, testDefaultVer)
 
-	expectedCall := fmt.Sprintf("sudo ubuntu-device-flash --revision=%d core %s --channel %s --developer-mode  -o %s",
-		100, testDefaultRelease, testDefaultChannel, filename)
+	expectedCall := fmt.Sprintf("sudo ubuntu-device-flash --revision=%d core %s --channel %s --os %s --kernel %s --gadget %s --developer-mode  -o %s",
+		100, testDefaultRelease, testDefaultChannel, testDefaultOS, testDefaultKernel, testDefaultGadget, filename)
 
 	c.Assert(s.cli.execCommandCalls[expectedCall], check.Equals, 0)
 }
