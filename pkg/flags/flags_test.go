@@ -85,6 +85,24 @@ func (s *flagsSuite) TestParseDefaultQcow2compat(c *check.C) {
 	c.Assert(parsedFlags.Qcow2compat, check.Equals, defaultQcow2compat)
 }
 
+func (s *flagsSuite) TestParseDefaultOs(c *check.C) {
+	parsedFlags := Parse()
+
+	c.Assert(parsedFlags.OS, check.Equals, defaultOS)
+}
+
+func (s *flagsSuite) TestParseDefaultKernel(c *check.C) {
+	parsedFlags := Parse()
+
+	c.Assert(parsedFlags.Kernel, check.Equals, defaultKernel)
+}
+
+func (s *flagsSuite) TestParseDefaultGadget(c *check.C) {
+	parsedFlags := Parse()
+
+	c.Assert(parsedFlags.Gadget, check.Equals, defaultGadget)
+}
+
 func (s *flagsSuite) TestParseSetsActionToFlagValue(c *check.C) {
 	os.Args = []string{"", "-action", "myaction"}
 	parsedFlags := Parse()
@@ -143,6 +161,27 @@ func (s *flagsSuite) TestParseSetsQcow2compatToFlagValue(c *check.C) {
 	parsedFlags := Parse()
 
 	c.Assert(parsedFlags.Qcow2compat, check.Equals, "myqcow2compat")
+}
+
+func (s *flagsSuite) TestParseSetsOsToFlagValue(c *check.C) {
+	os.Args = []string{"", "-os", "myos"}
+	parsedFlags := Parse()
+
+	c.Assert(parsedFlags.OS, check.Equals, "myos")
+}
+
+func (s *flagsSuite) TestParseSetsKernelToFlagValue(c *check.C) {
+	os.Args = []string{"", "-kernel", "mykernel"}
+	parsedFlags := Parse()
+
+	c.Assert(parsedFlags.Kernel, check.Equals, "mykernel")
+}
+
+func (s *flagsSuite) TestParseSetsGadgetToFlagValue(c *check.C) {
+	os.Args = []string{"", "-gadget", "mygadget"}
+	parsedFlags := Parse()
+
+	c.Assert(parsedFlags.Gadget, check.Equals, "mygadget")
 }
 
 // from flag.ResetForTesting
