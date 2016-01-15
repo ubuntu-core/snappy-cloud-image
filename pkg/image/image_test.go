@@ -100,9 +100,9 @@ func (s *imageSuite) TestCreateCallsUDF(c *check.C) {
 		version                                    int
 		expectedCall                               string
 	}{
-		{"15.04", "edge", "amd64", "os1", "kernel1", "gadget1", 100, "sudo ubuntu-device-flash --revision=100 core 15.04 --channel edge --os os1 --kernel kernel1 --gadget gadget1 --developer-mode  -o " + filename},
+		{"16.04", "edge", "amd64", "os1", "kernel1", "gadget1", 100, "sudo ubuntu-device-flash --revision=100 core 16.04 --channel edge --os os1 --kernel kernel1 --gadget gadget1 --developer-mode  -o " + filename},
 		{"rolling", "stable", "amd64", "os2", "kernel2", "gadget2", 100, "sudo ubuntu-device-flash --revision=100 core rolling --channel stable --os os2 --kernel kernel2 --gadget gadget2 --developer-mode  -o " + filename},
-		{"15.04", "alpha", "arm", "os3", "kernel3", "gadget3", 56, "sudo ubuntu-device-flash --revision=56 core 15.04 --channel alpha --os os3 --kernel kernel3 --gadget gadget3 --developer-mode --oem beagleblack -o " + filename},
+		{"17.10", "alpha", "arm", "os3", "kernel3", "gadget3", 56, "sudo ubuntu-device-flash --revision=56 core 17.10 --channel alpha --os os3 --kernel kernel3 --gadget gadget3 --developer-mode --oem beagleblack -o " + filename},
 	}
 
 	for _, item := range testCases {
@@ -123,6 +123,34 @@ func (s *imageSuite) TestCreateCallsUDF(c *check.C) {
 		c.Assert(len(s.cli.execCommandCalls) > 0, check.Equals, true)
 		c.Check(s.cli.execCommandCalls[item.expectedCall], check.Equals, 1)
 	}
+}
+
+func (s *imageSuite) TestCreateCallsUDFWithoutAllSnapsParamsFor1504(c *check.C) {
+	s.cli.output = tmpDirName
+	filename := tmpRawFileName()
+
+	version := 56
+	release := "15.04"
+
+	expectedCall := fmt.Sprintf("sudo ubuntu-device-flash --revision=%d core %s --channel %s --developer-mode  -o %s",
+		version, release, testDefaultChannel, filename)
+
+	s.cli.execCommandCalls = make(map[string]int)
+	options := &flags.Options{
+		Release:     release,
+		Channel:     testDefaultChannel,
+		Arch:        testDefaultArch,
+		Qcow2compat: testDefaultQcow2compat,
+		OS:          "myos",
+		Kernel:      "mykernel",
+		Gadget:      "mygadget",
+	}
+
+	_, err := s.subject.Create(options, version)
+
+	c.Check(err, check.IsNil)
+	c.Assert(len(s.cli.execCommandCalls) > 0, check.Equals, true)
+	c.Check(s.cli.execCommandCalls[expectedCall], check.Equals, 1)
 }
 
 func (s *imageSuite) TestCreateDoesNotCallUDFOnMktempError(c *check.C) {

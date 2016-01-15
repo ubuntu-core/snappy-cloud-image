@@ -90,11 +90,17 @@ func (u *UDFQcow2) Create(options *flags.Options, ver int) (path string, err err
 		"--revision=" + strconv.Itoa(ver),
 		"core", options.Release,
 		"--channel", options.Channel,
-		"--os", options.OS,
-		"--kernel", options.Kernel,
-		"--gadget", options.Gadget,
+	}
+	if options.Release != "15.04" {
+		cmds = append(cmds, []string{
+			"--os", options.OS,
+			"--kernel", options.Kernel,
+			"--gadget", options.Gadget,
+		}...)
+	}
+	cmds = append(cmds, []string{
 		"--developer-mode",
-		archFlag, "-o", rawTmpFileName}
+		archFlag, "-o", rawTmpFileName}...)
 
 	log.Debug("Executing command ", strings.Join(cmds, " "))
 	output, err := u.cli.ExecCommand(cmds...)
