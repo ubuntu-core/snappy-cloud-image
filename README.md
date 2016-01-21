@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/ubuntu-core/snappy-cloud-image.svg)](https://travis-ci.org/ubuntu-core/snappy-cloud-image)
+[![Build Status](https://travis-ci.org/ubuntu-core/snappy-cloud-image.svg)](https://travis-ci.org/ubuntu-core/snappy-cloud-image) [![Coverage Status](https://coveralls.io/repos/github/ubuntu-core/snappy-cloud-image/badge.svg?branch=master)](https://coveralls.io/github/ubuntu-core/snappy-cloud-image?branch=master)
 # Snappy Cloud Image
 
 This utility manages Snappy images in a Glance endpoint to be used by Snappy CI [1].
