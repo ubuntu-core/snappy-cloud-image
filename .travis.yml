@@ -7,4 +7,5 @@ before_install:
   - go get github.com/mattn/goveralls
   - if ! go get github.com/golang/tools/cmd/cover; then go get golang.org/x/tools/cmd/cover; fi
 script:
-  - $HOME/gopath/bin/goveralls -service=travis-ci
+  - ./gen-coverage.sh
+  - $HOME/gopath/bin/goveralls -coverprofile=coverage.out -service=travis-ci
