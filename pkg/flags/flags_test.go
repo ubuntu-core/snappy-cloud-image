@@ -1,7 +1,7 @@
 // -*- Mode: Go; indent-tabs-mode: t -*-
 
 /*
- * Copyright (C) 2015 Canonical Ltd
+ * Copyright (C) 2015, 2016 Canonical Ltd
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -103,6 +103,12 @@ func (s *flagsSuite) TestParseDefaultGadget(c *check.C) {
 	c.Assert(parsedFlags.Gadget, check.Equals, defaultGadget)
 }
 
+func (s *flagsSuite) TestParseDefaultImageType(c *check.C) {
+	parsedFlags := Parse()
+
+	c.Assert(parsedFlags.ImageType, check.Equals, defaultImageType)
+}
+
 func (s *flagsSuite) TestParseSetsActionToFlagValue(c *check.C) {
 	os.Args = []string{"", "-action", "myaction"}
 	parsedFlags := Parse()
@@ -182,6 +188,13 @@ func (s *flagsSuite) TestParseSetsGadgetToFlagValue(c *check.C) {
 	parsedFlags := Parse()
 
 	c.Assert(parsedFlags.Gadget, check.Equals, "mygadget")
+}
+
+func (s *flagsSuite) TestParseSetsImageTypeToFlagValue(c *check.C) {
+	os.Args = []string{"", "-image-type", "myimagetype"}
+	parsedFlags := Parse()
+
+	c.Assert(parsedFlags.ImageType, check.Equals, "myimagetype")
 }
 
 // from flag.ResetForTesting

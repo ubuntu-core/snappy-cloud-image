@@ -1,7 +1,7 @@
 // -*- Mode: Go; indent-tabs-mode: t -*-
 
 /*
- * Copyright (C) 2015 Canonical Ltd
+ * Copyright (C) 2015, 2016 Canonical Ltd
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -24,6 +24,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/ubuntu-core/snappy-cloud-image/pkg/flags"
 	"github.com/ubuntu-core/snappy-cloud-image/pkg/web"
 )
 
@@ -69,8 +70,8 @@ type file struct {
 
 // GetLatestVersion returns the highest version from the system image server for the given
 // release, channel and arch, or an error in case something goes wrong
-func (c *Client) GetLatestVersion(release, channel, arch string) (ver int, err error) {
-	url := generateURL(release, channel, arch)
+func (c *Client) GetLatestVersion(options *flags.Options) (ver int, err error) {
+	url := generateURL(options)
 	content, err := c.httpClient.Get(url)
 	if err != nil {
 		return
@@ -94,10 +95,10 @@ func (c *Client) GetLatestVersion(release, channel, arch string) (ver int, err e
 	return
 }
 
-func generateURL(release, channel, arch string) string {
-	if arch == "arm" {
-		arch += "hf"
+func generateURL(options *flags.Options) string {
+	if options.Arch == "arm" {
+		options.Arch += "hf"
 	}
 	return fmt.Sprintf("%s/%s/%s/generic_%s/%s",
-		baseURL, release, channel, arch, dataFileName)
+		baseURL, options.Release, options.Channel, options.Arch, dataFileName)
 }

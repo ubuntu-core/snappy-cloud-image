@@ -1,7 +1,7 @@
 // -*- Mode: Go; indent-tabs-mode: t -*-
 
 /*
- * Copyright (C) 2015 Canonical Ltd
+ * Copyright (C) 2015, 2016 Canonical Ltd
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -27,7 +27,7 @@ import (
 
 // Options has fields for the existing flags
 type Options struct {
-	Action, Release, Channel, Arch, LogLevel, Qcow2compat, OS, Kernel, Gadget string
+	Action, Release, Channel, Arch, LogLevel, Qcow2compat, OS, Kernel, Gadget, ImageType string
 }
 
 const (
@@ -40,6 +40,7 @@ const (
 	defaultKernel      = "canonical-pc-linux.canonical"
 	defaultOS          = "ubuntu-core.canonical"
 	defaultGadget      = "canonical-pc.canonical"
+	defaultImageType   = "custom"
 )
 
 // Parse analyzes the flags and returns a Options instance with the values
@@ -57,6 +58,8 @@ func Parse() *Options {
 			"Kernel snap of the image to be built, defaults to "+defaultKernel)
 		gadget = flag.String("gadget", defaultGadget,
 			"Gadget snap of the image to be built, defaults to "+defaultGadget)
+		imageType = flag.String("image-type", defaultImageType,
+			"Type of image to be built, this string will be put in the image name. Defaults to "+defaultImageType)
 	)
 	flag.Parse()
 	dotRelease := addDot(*release)
@@ -69,7 +72,8 @@ func Parse() *Options {
 		Qcow2compat: *qcow2compat,
 		OS:          *os,
 		Kernel:      *kernel,
-		Gadget:      *gadget}
+		Gadget:      *gadget,
+		ImageType:   *imageType}
 }
 
 func addDot(release string) string {

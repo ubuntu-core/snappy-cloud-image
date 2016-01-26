@@ -40,21 +40,21 @@ const (
 
 // Pollster holds the methods for querying an image backend
 type Pollster interface {
-	GetLatestVersion(release, channel, arch string) (ver int, err error)
+	GetLatestVersion(options *flags.Options) (ver int, err error)
 }
 
 // FullPollster is a Pollster that knows how to get a list of Versions too
 type FullPollster interface {
 	Pollster
-	GetVersions(release, channel, arch string) (images []string, err error)
+	GetVersions(options *flags.Options) (images []string, err error)
 }
 
 // PollsterWriter is a Pollster that can also create and delete images
 type PollsterWriter interface {
 	FullPollster
-	Create(filePath, release, channel, arch string, version int) (err error)
+	Create(filePath string, options *flags.Options, version int) (err error)
 	Delete(images ...string) (err error)
-	Purge() (err error)
+	Purge(options *flags.Options) (err error)
 }
 
 // Driver defines the methods required for creating images

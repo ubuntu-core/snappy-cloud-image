@@ -1,7 +1,7 @@
 // -*- Mode: Go; indent-tabs-mode: t -*-
 
 /*
- * Copyright (C) 2015 Canonical Ltd
+ * Copyright (C) 2015, 2016 Canonical Ltd
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -32,10 +32,11 @@ import (
 	log "github.com/Sirupsen/logrus"
 
 	"github.com/ubuntu-core/snappy-cloud-image/pkg/cli"
+	"github.com/ubuntu-core/snappy-cloud-image/pkg/flags"
 )
 
 const (
-	baseImageName          = "ubuntu-core/custom/ubuntu-"
+	baseImageName          = "ubuntu-core/%s/ubuntu-"
 	imageNamePrefixPattern = baseImageName + "%s-snappy-core-%s-%s"
 	imageNameSufix         = "disk1.img"
 	errVerNotFoundPattern  = "Version not found for release %s, channel %s and arch %s"
@@ -57,8 +58,8 @@ func NewClient(cli cli.Commander) *Client {
 type ErrVersionNotFound struct{ release, channel, arch string }
 
 // NewErrVersionNotFound is th ErrVersionNotFound constructor
-func NewErrVersionNotFound(release, channel, arch string) *ErrVersionNotFound {
-	return &ErrVersionNotFound{release: release, channel: channel, arch: arch}
+func NewErrVersionNotFound(options *flags.Options) *ErrVersionNotFound {
+	return &ErrVersionNotFound{release: options.Release, channel: options.Channel, arch: options.Arch}
 }
 
 func (e *ErrVersionNotFound) Error() string {
@@ -67,8 +68,8 @@ func (e *ErrVersionNotFound) Error() string {
 
 // GetLatestVersion returns the highest version of the custom images for the given
 // release, channel and arch, -1 if none is found, and the eventual error
-func (c *Client) GetLatestVersion(release, channel, arch string) (ver int, err error) {
-	imageIDs, err := c.extractVersionsFromList(release, channel, arch)
+func (c *Client) GetLatestVersion(options *flags.Options) (ver int, err error) {
+	imageIDs, err := c.extractVersionsFromList(options)
 	if err != nil {
 		return 0, err
 	}
@@ -81,8 +82,8 @@ func (c *Client) GetLatestVersion(release, channel, arch string) (ver int, err e
 
 // Create makes the call to create the new image given a file path with the local image
 // and the required bits for making up the image name
-func (c *Client) Create(path, release, channel, arch string, version int) (err error) {
-	imageID := GetImageID(release, channel, arch, version)
+func (c *Client) Create(path string, options *flags.Options, version int) (err error) {
+	imageID := GetImageID(options, version)
 
 	log.Debugf("Creating image %s from file %s", imageID, path)
 
@@ -92,10 +93,10 @@ func (c *Client) Create(path, release, channel, arch string, version int) (err e
 
 // extractVersionsFromList returns a list of image names that match the given
 // release, channel and arch sorted in descendant version number order
-func (c *Client) extractVersionsFromList(release, channel, arch string) ([]string, error) {
-	release = removeDot(release)
+func (c *Client) extractVersionsFromList(options *flags.Options) ([]string, error) {
+	options.Release = removeDot(options.Release)
 	var imageIDs sort.StringSlice
-	imageIDs, err := c.getImageList(imgTemplate(release, channel, arch))
+	imageIDs, err := c.getImageList(imgTemplate(options))
 	if err != nil {
 		return imageIDs, err
 	}
@@ -103,7 +104,7 @@ func (c *Client) extractVersionsFromList(release, channel, arch string) ([]strin
 		sort.Sort(sort.Reverse(imageIDs[:]))
 		return imageIDs, nil
 	}
-	return []string{}, NewErrVersionNotFound(release, channel, arch)
+	return []string{}, NewErrVersionNotFound(options)
 }
 
 // getImageList returns a list of image IDs that match a given pattern
@@ -132,8 +133,8 @@ func (c *Client) getImageList(pattern string) (imagelist []string, err error) {
 	return imageIDs, nil
 }
 
-func imgTemplate(release, channel, arch string) (pattern string) {
-	return fmt.Sprintf(imageNamePrefixPattern, release, arch, channel)
+func imgTemplate(options *flags.Options) (pattern string) {
+	return fmt.Sprintf(imageNamePrefixPattern, options.ImageType, options.Release, options.Arch, options.Channel)
 }
 
 // Returns the version contained in imageID, which is of the form:
@@ -145,9 +146,9 @@ func extractVersion(imageID string) (ver int, err error) {
 }
 
 // GetImageID returns the image name for the given parameters
-func GetImageID(release, channel, arch string, version int) (name string) {
-	release = removeDot(release)
-	imageNamePrefix := fmt.Sprintf(imageNamePrefixPattern, release, arch, channel)
+func GetImageID(options *flags.Options, version int) (name string) {
+	options.Release = removeDot(options.Release)
+	imageNamePrefix := imgTemplate(options)
 	return fmt.Sprintf("%s-%d-%s", imageNamePrefix, version, imageNameSufix)
 }
 
@@ -158,16 +159,17 @@ func (c *Client) Delete(images ...string) (err error) {
 }
 
 // GetVersions returns a descending ordered list (newer first) of image names for the given parameters
-func (c *Client) GetVersions(release, channel, arch string) (imageNames []string, err error) {
-	return c.extractVersionsFromList(release, channel, arch)
+func (c *Client) GetVersions(options *flags.Options) (imageNames []string, err error) {
+	return c.extractVersionsFromList(options)
 }
 
 // Purge asks the glance endpoint to remove all the custom images present.
 // Use with care! For example it can be useful when deploying a new jenkins,
 // the instances from images created with the previous one won't be accessible
 // any more
-func (c *Client) Purge() error {
-	images, err := c.getImageList(baseImageName)
+func (c *Client) Purge(options *flags.Options) error {
+	imageName := fmt.Sprintf(baseImageName, options.ImageType)
+	images, err := c.getImageList(imageName)
 	if err != nil {
 		return err
 	}
