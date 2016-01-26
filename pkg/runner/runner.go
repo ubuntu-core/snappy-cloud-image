@@ -1,6 +1,6 @@
 // -*- Mode: Go; indent-tabs-mode: t -*-
 /*
- * Copyright (C) 2015 Canonical Ltd
+ * Copyright (C) 2015, 2016 Canonical Ltd
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -73,7 +73,7 @@ func (r *Runner) Exec(options *flags.Options) (err error) {
 	} else if options.Action == "cleanup" {
 		return r.cleanup(options)
 	} else if options.Action == "purge" {
-		return r.purge()
+		return r.purge(options)
 	}
 	return &ErrActionUnknown{action: options.Action}
 }
@@ -81,7 +81,7 @@ func (r *Runner) Exec(options *flags.Options) (err error) {
 func (r *Runner) create(options *flags.Options) (err error) {
 	log.Infof("Checking current versions for release %s, channel %s and arch %s", options.Release, options.Channel, options.Arch)
 	var siVersion, cloudVersion int
-	siVersion, cloudVersion, err = r.getVersions(options.Release, options.Channel, options.Arch)
+	siVersion, cloudVersion, err = r.getVersions(options)
 	if err != nil {
 		return
 	}
@@ -98,7 +98,7 @@ func (r *Runner) create(options *flags.Options) (err error) {
 	}
 
 	log.Infof("Uploading %s", path)
-	err = r.imgDataTarget.Create(path, options.Release, options.Channel, options.Arch, siVersion)
+	err = r.imgDataTarget.Create(path, options, siVersion)
 	if err != nil {
 		return
 	}
@@ -107,18 +107,18 @@ func (r *Runner) create(options *flags.Options) (err error) {
 
 }
 
-func (r *Runner) getVersions(release, channel, arch string) (siVersion, cloudVersion int, err error) {
+func (r *Runner) getVersions(options *flags.Options) (siVersion, cloudVersion int, err error) {
 	var siError, cloudError error
 	versionChan := make(chan struct{}, 2)
 
 	go func() {
-		siVersion, siError = r.imgDataOrigin.GetLatestVersion(release, channel, arch)
+		siVersion, siError = r.imgDataOrigin.GetLatestVersion(options)
 		log.Info("siVersion: ", siVersion)
 		versionChan <- struct{}{}
 	}()
 
 	go func() {
-		cloudVersion, cloudError = r.imgDataTarget.GetLatestVersion(release, channel, arch)
+		cloudVersion, cloudError = r.imgDataTarget.GetLatestVersion(options)
 		log.Info("cloudVersion: ", cloudVersion)
 		versionChan <- struct{}{}
 	}()
@@ -139,8 +139,8 @@ func (r *Runner) getVersions(release, channel, arch string) (siVersion, cloudVer
 }
 
 func (r *Runner) cleanup(options *flags.Options) (err error) {
-	noDotsRelease := strings.Replace(options.Release, ".", "", 1)
-	imageList, err := r.imgDataTarget.GetVersions(noDotsRelease, options.Channel, options.Arch)
+	options.Release = strings.Replace(options.Release, ".", "", 1)
+	imageList, err := r.imgDataTarget.GetVersions(options)
 	if err != nil {
 		log.Info("Error getting image list")
 		return
@@ -154,6 +154,6 @@ func (r *Runner) cleanup(options *flags.Options) (err error) {
 	return
 }
 
-func (r *Runner) purge() (err error) {
-	return r.imgDataTarget.Purge()
+func (r *Runner) purge(options *flags.Options) (err error) {
+	return r.imgDataTarget.Purge(options)
 }

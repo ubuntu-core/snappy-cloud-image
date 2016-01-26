@@ -1,6 +1,6 @@
 // -*- Mode: Go; indent-tabs-mode: t -*-
 /*
- * Copyright (C) 2015 Canonical Ltd
+ * Copyright (C) 2015, 2016 Canonical Ltd
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -74,8 +74,8 @@ type fakeSiClient struct {
 	version         int
 }
 
-func (s *fakeSiClient) GetLatestVersion(release, channel, arch string) (ver int, err error) {
-	key := getFakeKey(release, channel, arch)
+func (s *fakeSiClient) GetLatestVersion(options *flags.Options) (ver int, err error) {
+	key := getFakeKey(options)
 	s.getVersionCalls[key]++
 	if s.doErr {
 		err = fmt.Errorf(siVersionError)
@@ -98,20 +98,20 @@ type fakeCloudClient struct {
 	versions              []string
 }
 
-func (s *fakeCloudClient) GetLatestVersion(release, channel, arch string) (ver int, err error) {
-	key := getFakeKey(release, channel, arch)
+func (s *fakeCloudClient) GetLatestVersion(options *flags.Options) (ver int, err error) {
+	key := getFakeKey(options)
 	s.getLatestVersionCalls[key]++
 	if s.doVerErr {
 		err = fmt.Errorf(cloudLatestVersionError)
 	}
 	if s.doVerNotFoundErr {
-		err = cloud.NewErrVersionNotFound(release, channel, arch)
+		err = cloud.NewErrVersionNotFound(options)
 	}
 	return s.version, err
 }
 
-func (s *fakeCloudClient) GetVersions(release, channel, arch string) (images []string, err error) {
-	key := getFakeKey(release, channel, arch)
+func (s *fakeCloudClient) GetVersions(options *flags.Options) (images []string, err error) {
+	key := getFakeKey(options)
 	s.getVersionsCalls[key]++
 	if s.doVerErr {
 		err = fmt.Errorf(cloudVersionsError)
@@ -119,8 +119,8 @@ func (s *fakeCloudClient) GetVersions(release, channel, arch string) (images []s
 	return s.versions, err
 }
 
-func (s *fakeCloudClient) Create(filePath, release, channel, arch string, version int) (err error) {
-	key := getFullCreateKey(filePath, release, channel, arch, version)
+func (s *fakeCloudClient) Create(filePath string, options *flags.Options, version int) (err error) {
+	key := getFullCreateKey(filePath, options, version)
 	s.createCalls[key]++
 	if s.doCreateErr {
 		err = fmt.Errorf(cloudCreateError)
@@ -137,7 +137,7 @@ func (s *fakeCloudClient) Delete(versions ...string) (err error) {
 	return
 }
 
-func (s *fakeCloudClient) Purge() (err error) {
+func (s *fakeCloudClient) Purge(options *flags.Options) (err error) {
 	s.purgeCalls++
 	if s.doPurgeErr {
 		err = fmt.Errorf(cloudPurgeError)
@@ -152,7 +152,7 @@ type fakeImgDriver struct {
 }
 
 func (s *fakeImgDriver) Create(options *flags.Options, version int) (path string, err error) {
-	key := getCreateKey(options.Release, options.Channel, options.Arch, version)
+	key := getCreateKey(options, version)
 	s.createCalls[key]++
 	if s.doErr {
 		err = fmt.Errorf(udfCreateError)
@@ -220,7 +220,7 @@ func (s *runnerCreateSuite) TestExecCreateGetsSIVersion(c *check.C) {
 
 	c.Assert(err, check.IsNil)
 
-	key := getFakeKey(s.options.Release, s.options.Channel, s.options.Arch)
+	key := getFakeKey(s.options)
 	c.Assert(s.siClient.getVersionCalls[key], check.Equals, 1)
 }
 
@@ -247,7 +247,7 @@ func (s *runnerCreateSuite) TestExecGetsCloudLatestVersion(c *check.C) {
 
 	c.Assert(err, check.IsNil)
 
-	key := getFakeKey(s.options.Release, s.options.Channel, s.options.Arch)
+	key := getFakeKey(s.options)
 	c.Assert(s.cloudClient.getLatestVersionCalls[key], check.Equals, 1)
 }
 
@@ -299,7 +299,7 @@ func (s *runnerCreateSuite) TestExecCallsDriverCreate(c *check.C) {
 
 	c.Assert(err, check.IsNil)
 
-	key := getCreateKey(s.options.Release, s.options.Channel, s.options.Arch, s.siClient.version)
+	key := getCreateKey(s.options, s.siClient.version)
 	c.Assert(s.udfDriver.createCalls[key], check.Equals, 1)
 }
 
@@ -326,7 +326,7 @@ func (s *runnerCreateSuite) TestExecCallsCloudCreate(c *check.C) {
 
 	c.Assert(err, check.IsNil)
 
-	key := getFullCreateKey("mypath", s.options.Release, s.options.Channel, s.options.Arch, s.siClient.version)
+	key := getFullCreateKey("mypath", s.options, s.siClient.version)
 	c.Assert(s.cloudClient.createCalls[key], check.Equals, 1)
 }
 
@@ -376,7 +376,7 @@ func (s *runnerCleanupSuite) TestExecGetsCloudVersions(c *check.C) {
 
 	c.Assert(err, check.IsNil)
 
-	key := getFakeKey(s.options.Release, s.options.Channel, s.options.Arch)
+	key := getFakeKey(s.options)
 	c.Assert(s.cloudClient.getVersionsCalls[key], check.Equals, 1)
 }
 
@@ -393,7 +393,7 @@ func (s *runnerCleanupSuite) TestExecGetVersionsReceivesReleaseWithoutDots(c *ch
 	s.options.Release = "15.04"
 	s.subject.Exec(s.options)
 
-	key := getFakeKey("1504", s.options.Channel, s.options.Arch)
+	key := getFakeKey(s.options)
 	fmt.Println(s.cloudClient.getVersionsCalls)
 	c.Assert(s.cloudClient.getVersionsCalls[key], check.Equals, 1)
 }
@@ -412,7 +412,7 @@ func (s *runnerCleanupSuite) TestExecCallsDeleteForExcedentImages(c *check.C) {
 	for i := imagesToKeep + excedent; i >= 0; i-- {
 		s.cloudClient.versions = append(
 			s.cloudClient.versions,
-			cloud.GetImageID(s.options.Release, s.options.Channel, s.options.Arch, i+base))
+			cloud.GetImageID(s.options, i+base))
 	}
 
 	s.subject.Exec(s.options)
@@ -427,7 +427,7 @@ func (s *runnerCleanupSuite) TestExecDoesNotCallDeleteWithouExcedentImages(c *ch
 	for i := imagesToKeep - 1; i >= 0; i-- {
 		s.cloudClient.versions = append(
 			s.cloudClient.versions,
-			cloud.GetImageID(s.options.Release, s.options.Channel, s.options.Arch, i+base))
+			cloud.GetImageID(s.options, i+base))
 	}
 
 	s.subject.Exec(s.options)
@@ -481,16 +481,16 @@ func (s *runnerPurgeSuite) TestExecReturnsPurgeError(c *check.C) {
 	c.Assert(err.Error(), check.Equals, cloudPurgeError)
 }
 
-func getFakeKey(release, channel, arch string) string {
-	return fmt.Sprintf("%s - %s - %s", release, channel, arch)
+func getFakeKey(options *flags.Options) string {
+	return fmt.Sprintf("%s - %s - %s", options.Release, options.Channel, options.Arch)
 }
 
-func getCreateKey(release, channel, arch string, ver int) string {
-	return fmt.Sprintf("%s - %d", getFakeKey(release, channel, arch), ver)
+func getCreateKey(options *flags.Options, ver int) string {
+	return fmt.Sprintf("%s - %d", getFakeKey(options), ver)
 }
 
-func getFullCreateKey(path, release, channel, arch string, ver int) string {
-	return fmt.Sprintf("%s - %s", path, getCreateKey(release, channel, arch, ver))
+func getFullCreateKey(path string, options *flags.Options, ver int) string {
+	return fmt.Sprintf("%s - %s", path, getCreateKey(options, ver))
 }
 
 func getDeleteKey(versions []string) string {

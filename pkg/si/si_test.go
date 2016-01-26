@@ -1,7 +1,7 @@
 // -*- Mode: Go; indent-tabs-mode: t -*-
 
 /*
- * Copyright (C) 2015 Canonical Ltd
+ * Copyright (C) 2015, 2016 Canonical Ltd
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -25,6 +25,7 @@ import (
 
 	"gopkg.in/check.v1"
 
+	"github.com/ubuntu-core/snappy-cloud-image/pkg/flags"
 	"github.com/ubuntu-core/snappy-cloud-image/pkg/web"
 )
 
@@ -79,8 +80,9 @@ const (
 )
 
 type siSuite struct {
-	subject   *Client
-	webGetter *fakeWebGetter
+	subject        *Client
+	webGetter      *fakeWebGetter
+	defaultOptions *flags.Options
 }
 
 func Test(t *testing.T) { check.TestingT(t) }
@@ -108,6 +110,11 @@ func (s *siSuite) SetUpTest(c *check.C) {
 	s.webGetter.calls = make(map[string]int)
 	s.webGetter.error = false
 	s.webGetter.output = []byte(validJSONResponse)
+	s.defaultOptions = &flags.Options{
+		Release: testDefaultRelease,
+		Channel: testDefaultChannel,
+		Arch:    testDefaultArch,
+	}
 }
 
 func (s *siSuite) TestGetLatestVersionQueriesTheRightUrl(c *check.C) {
@@ -128,7 +135,12 @@ func (s *siSuite) TestGetLatestVersionQueriesTheRightUrl(c *check.C) {
 		{"rolling", "stable", "arm", baseURL + "/rolling/stable/generic_armhf/" + dataFileName},
 	}
 	for _, item := range testCases {
-		_, err := s.subject.GetLatestVersion(item.release, item.channel, item.arch)
+		options := &flags.Options{
+			Release: item.release,
+			Channel: item.channel,
+			Arch:    item.arch,
+		}
+		_, err := s.subject.GetLatestVersion(options)
 
 		c.Check(err, check.IsNil)
 		c.Check(s.webGetter.calls[item.expected], check.Equals, 1)
@@ -138,14 +150,14 @@ func (s *siSuite) TestGetLatestVersionQueriesTheRightUrl(c *check.C) {
 func (s *siSuite) TestGetLatestVersionReturnshttpGetterError(c *check.C) {
 	s.webGetter.error = true
 
-	_, err := s.subject.GetLatestVersion(testDefaultRelease, testDefaultChannel, testDefaultArch)
+	_, err := s.subject.GetLatestVersion(s.defaultOptions)
 
 	c.Assert(err, check.NotNil)
 	c.Assert(err, check.FitsTypeOf, &web.ErrHTTPGet{})
 }
 
 func (s *siSuite) TestGetLatestVersionParsesJsonResponse(c *check.C) {
-	output, err := s.subject.GetLatestVersion(testDefaultRelease, testDefaultChannel, testDefaultArch)
+	output, err := s.subject.GetLatestVersion(s.defaultOptions)
 
 	c.Assert(err, check.IsNil)
 	c.Assert(output, check.Equals, testImageVersion)
@@ -160,7 +172,7 @@ func (s *siSuite) TestGetLatestVersionGetsTheLatestVersion(c *check.C) {
 
 	s.webGetter.output = []byte(response)
 
-	output, err := s.subject.GetLatestVersion(testDefaultRelease, testDefaultChannel, testDefaultArch)
+	output, err := s.subject.GetLatestVersion(s.defaultOptions)
 
 	c.Assert(err, check.IsNil)
 	c.Assert(output, check.Equals, testImageVersion)
@@ -175,7 +187,7 @@ func (s *siSuite) TestGetLatestVersionHonoursDeltas(c *check.C) {
 
 	s.webGetter.output = []byte(response)
 
-	output, err := s.subject.GetLatestVersion(testDefaultRelease, testDefaultChannel, testDefaultArch)
+	output, err := s.subject.GetLatestVersion(s.defaultOptions)
 
 	c.Assert(err, check.IsNil)
 	c.Assert(output, check.Equals, testImageVersion)
@@ -184,7 +196,7 @@ func (s *siSuite) TestGetLatestVersionHonoursDeltas(c *check.C) {
 func (s *siSuite) TestGetLatestVersionReturnsUnmarshalError(c *check.C) {
 	s.webGetter.output = []byte("{{Not a valid JSON 'string']")
 
-	_, err := s.subject.GetLatestVersion(testDefaultRelease, testDefaultChannel, testDefaultArch)
+	_, err := s.subject.GetLatestVersion(s.defaultOptions)
 
 	c.Assert(err, check.NotNil)
 }
