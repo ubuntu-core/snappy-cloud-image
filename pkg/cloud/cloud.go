@@ -69,7 +69,7 @@ func (e *ErrVersionNotFound) Error() string {
 // GetLatestVersion returns the highest version of the custom images for the given
 // release, channel and arch, -1 if none is found, and the eventual error
 func (c *Client) GetLatestVersion(options *flags.Options) (ver int, err error) {
-	imageIDs, err := c.extractVersionsFromList(options)
+	imageIDs, err := c.extractVersionsFromList(*options)
 	if err != nil {
 		return 0, err
 	}
@@ -93,10 +93,10 @@ func (c *Client) Create(path string, options *flags.Options, version int) (err e
 
 // extractVersionsFromList returns a list of image names that match the given
 // release, channel and arch sorted in descendant version number order
-func (c *Client) extractVersionsFromList(options *flags.Options) ([]string, error) {
+func (c *Client) extractVersionsFromList(options flags.Options) ([]string, error) {
 	options.Release = removeDot(options.Release)
 	var imageIDs sort.StringSlice
-	imageIDs, err := c.getImageList(imgTemplate(options))
+	imageIDs, err := c.getImageList(imgTemplate(&options))
 	if err != nil {
 		return imageIDs, err
 	}
@@ -104,7 +104,7 @@ func (c *Client) extractVersionsFromList(options *flags.Options) ([]string, erro
 		sort.Sort(sort.Reverse(imageIDs[:]))
 		return imageIDs, nil
 	}
-	return []string{}, NewErrVersionNotFound(options)
+	return []string{}, NewErrVersionNotFound(&options)
 }
 
 // getImageList returns a list of image IDs that match a given pattern
@@ -160,7 +160,7 @@ func (c *Client) Delete(images ...string) (err error) {
 
 // GetVersions returns a descending ordered list (newer first) of image names for the given parameters
 func (c *Client) GetVersions(options *flags.Options) (imageNames []string, err error) {
-	return c.extractVersionsFromList(options)
+	return c.extractVersionsFromList(*options)
 }
 
 // Purge asks the glance endpoint to remove all the custom images present.

@@ -362,6 +362,15 @@ func (s *cloudSuite) TestPurgeReturnsCliError(c *check.C) {
 	c.Assert(s.cli.execCommandCalls[unexpectedCall], check.Equals, 0)
 }
 
+func (s *cloudSuite) TestExtractVersionsFromListDoNotModifyRelease(c *check.C) {
+	expectedRelease := "15.04"
+	s.defaultOptions.Release = expectedRelease
+
+	s.subject.extractVersionsFromList(*s.defaultOptions)
+
+	c.Assert(s.defaultOptions.Release, check.Equals, expectedRelease)
+}
+
 func getIDFromGlanceResponse(response string) string {
 	// response is of the form:
 	// | 762d5ce2-fbc2-4685-8d6c-71249d19df9e | ubuntu-core/custom/ubuntu-%s-snappy-core-%s-%s-%d-disk1.img                        |
