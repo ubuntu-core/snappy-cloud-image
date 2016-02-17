@@ -215,13 +215,24 @@ func (s *runnerPurgeSuite) SetUpTest(c *check.C) {
 	s.options.Action = "purge"
 }
 
-func (s *runnerCreateSuite) TestExecCreateGetsSIVersion(c *check.C) {
+func (s *runnerCreateSuite) TestExecCreateGetsSIVersionFor1504(c *check.C) {
+	s.options.Release = "15.04"
 	err := s.subject.Exec(s.options)
 
 	c.Assert(err, check.IsNil)
 
 	key := getFakeKey(s.options)
 	c.Assert(s.siClient.getVersionCalls[key], check.Equals, 1)
+}
+
+func (s *runnerCreateSuite) TestExecCreateDoesNotGetSIVersionForNon1504(c *check.C) {
+	s.options.Release = "non-15.04"
+	err := s.subject.Exec(s.options)
+
+	c.Assert(err, check.IsNil)
+
+	key := getFakeKey(s.options)
+	c.Assert(s.siClient.getVersionCalls[key], check.Equals, 0)
 }
 
 func (s *runnerCreateSuite) TestExecDoesNotGetSIVersionOnNonCreateAction(c *check.C) {
@@ -241,14 +252,23 @@ func (s *runnerCreateSuite) TestExecReturnsGetSIVersionError(c *check.C) {
 	c.Assert(err.Error(), check.Equals, siVersionError)
 }
 
-func (s *runnerCreateSuite) TestExecGetsCloudLatestVersion(c *check.C) {
-	s.options.Release = "1504"
+func (s *runnerCreateSuite) TestExecGetsCloudLatestVersionFor1504(c *check.C) {
 	err := s.subject.Exec(s.options)
 
 	c.Assert(err, check.IsNil)
 
 	key := getFakeKey(s.options)
 	c.Assert(s.cloudClient.getLatestVersionCalls[key], check.Equals, 1)
+}
+
+func (s *runnerCreateSuite) TestExecDoesNotGetCloudLatestVersionForNon1504(c *check.C) {
+	s.options.Release = "non15.04"
+	err := s.subject.Exec(s.options)
+
+	c.Assert(err, check.IsNil)
+
+	key := getFakeKey(s.options)
+	c.Assert(s.cloudClient.getLatestVersionCalls[key], check.Equals, 0)
 }
 
 func (s *runnerCreateSuite) TestExecDoesNotGetCloudVersionOnNonCreateAction(c *check.C) {
@@ -294,12 +314,22 @@ func (s *runnerCreateSuite) TestExecReturnsErrVersionIfCloudVersionNotLessThanSI
 	}
 }
 
-func (s *runnerCreateSuite) TestExecCallsDriverCreate(c *check.C) {
+func (s *runnerCreateSuite) TestExecCallsDriverCreateWithSIVersionFor1504(c *check.C) {
 	err := s.subject.Exec(s.options)
 
 	c.Assert(err, check.IsNil)
 
 	key := getCreateKey(s.options, s.siClient.version)
+	c.Assert(s.udfDriver.createCalls[key], check.Equals, 1)
+}
+
+func (s *runnerCreateSuite) TestExecCallsDriverCreateWithZeroForNon1504(c *check.C) {
+	s.options.Release = "non15.04"
+	err := s.subject.Exec(s.options)
+
+	c.Assert(err, check.IsNil)
+
+	key := getCreateKey(s.options, 0)
 	c.Assert(s.udfDriver.createCalls[key], check.Equals, 1)
 }
 
@@ -327,6 +357,17 @@ func (s *runnerCreateSuite) TestExecCallsCloudCreate(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	key := getFullCreateKey("mypath", s.options, s.siClient.version)
+	c.Assert(s.cloudClient.createCalls[key], check.Equals, 1)
+}
+
+func (s *runnerCreateSuite) TestExecCallsCloudCreateWithZeroVersionForNon1504(c *check.C) {
+	s.options.Release = "non15.04"
+	s.udfDriver.path = "mypath"
+	err := s.subject.Exec(s.options)
+
+	c.Assert(err, check.IsNil)
+
+	key := getFullCreateKey("mypath", s.options, 0)
 	c.Assert(s.cloudClient.createCalls[key], check.Equals, 1)
 }
 

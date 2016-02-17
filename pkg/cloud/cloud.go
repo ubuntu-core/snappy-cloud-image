@@ -28,6 +28,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 
@@ -149,7 +150,18 @@ func extractVersion(imageID string) (ver int, err error) {
 func GetImageID(options *flags.Options, version int) (name string) {
 	options.Release = removeDot(options.Release)
 	imageNamePrefix := imgTemplate(options)
-	return fmt.Sprintf("%s-%d-%s", imageNamePrefix, version, imageNameSufix)
+
+	finalVersion := strconv.Itoa(version)
+	// The numeric version makes sense for system-image based images, on all-snaps
+	// the version of the image, if any, should be determined by the versions of
+	// the snaps that form it. For the time being we assume by convention that
+	// version == 0 means all-snaps, and we replace it by a timestamp so that we are
+	// able to sort images by date
+	if version == 0 {
+		finalVersion = time.Now().Format("20060102150405.000000")
+	}
+
+	return fmt.Sprintf("%s-%s-%s", imageNamePrefix, finalVersion, imageNameSufix)
 }
 
 // Delete calls the cli command to remove the given images
