@@ -214,6 +214,27 @@ func (s *cloudSuite) TestGetImageID(c *check.C) {
 	}
 }
 
+func (s *cloudSuite) TestGetImageIDAssignsVersionOnZeroVersionGiven(c *check.C) {
+	output := GetImageID(s.defaultOptions, 0)
+
+	ver := getVersionFromImageID(output)
+
+	c.Assert(ver != "0", check.Equals, true)
+}
+
+func (s *cloudSuite) TestGetImageIDAssignsIncreasingVersionNumbersOnZeroVersionGiven(c *check.C) {
+	var currVer, prevVer string
+	for i := 0; i < 100; i++ {
+		output := GetImageID(s.defaultOptions, 0)
+
+		currVer = getVersionFromImageID(output)
+
+		c.Check(currVer > prevVer, check.Equals, true)
+		prevVer = currVer
+		fmt.Println(currVer)
+	}
+}
+
 func (s *cloudSuite) TestDeleteCallsCli(c *check.C) {
 	testCases := []struct {
 		images       []string
@@ -403,4 +424,9 @@ func testEq(a, b []string) bool {
 func getImageID(options *flags.Options, ver int) string {
 	return fmt.Sprintf("ubuntu-core/%s/ubuntu-%s-snappy-core-%s-%s-%d-disk1.img",
 		options.ImageType, options.Release, options.Arch, options.Channel, ver)
+}
+
+func getVersionFromImageID(imageID string) string {
+	parts := strings.Split(imageID, "-")
+	return parts[7]
 }

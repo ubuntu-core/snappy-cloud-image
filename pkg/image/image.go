@@ -1,7 +1,7 @@
 // -*- Mode: Go; indent-tabs-mode: t -*-
 
 /*
- * Copyright (C) 2015 Canonical Ltd
+ * Copyright (C) 2015, 2016 Canonical Ltd
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -86,11 +86,15 @@ func (u *UDFQcow2) Create(options *flags.Options, ver int) (path string, err err
 	if options.Arch == "arm" {
 		archFlag = "--oem beagleblack"
 	}
-	cmds := []string{"sudo", "ubuntu-device-flash",
-		"--revision=" + strconv.Itoa(ver),
+	cmds := []string{"sudo", "ubuntu-device-flash"}
+
+	if options.Release == "15.04" {
+		cmds = append(cmds, "--revision="+strconv.Itoa(ver))
+	}
+	cmds = append(cmds, []string{
 		"core", options.Release,
 		"--channel", options.Channel,
-	}
+	}...)
 	if options.Release != "15.04" {
 		cmds = append(cmds, []string{
 			"--os", options.OS,

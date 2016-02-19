@@ -1,7 +1,7 @@
 // -*- Mode: Go; indent-tabs-mode: t -*-
 
 /*
- * Copyright (C) 2015 Canonical Ltd
+ * Copyright (C) 2015, 2016 Canonical Ltd
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -100,9 +100,9 @@ func (s *imageSuite) TestCreateCallsUDF(c *check.C) {
 		version                                    int
 		expectedCall                               string
 	}{
-		{"16.04", "edge", "amd64", "os1", "kernel1", "gadget1", 100, "sudo ubuntu-device-flash --revision=100 core 16.04 --channel edge --os os1 --kernel kernel1 --gadget gadget1 --developer-mode  -o " + filename},
-		{"rolling", "stable", "amd64", "os2", "kernel2", "gadget2", 100, "sudo ubuntu-device-flash --revision=100 core rolling --channel stable --os os2 --kernel kernel2 --gadget gadget2 --developer-mode  -o " + filename},
-		{"17.10", "alpha", "arm", "os3", "kernel3", "gadget3", 56, "sudo ubuntu-device-flash --revision=56 core 17.10 --channel alpha --os os3 --kernel kernel3 --gadget gadget3 --developer-mode --oem beagleblack -o " + filename},
+		{"16.04", "edge", "amd64", "os1", "kernel1", "gadget1", 100, "sudo ubuntu-device-flash core 16.04 --channel edge --os os1 --kernel kernel1 --gadget gadget1 --developer-mode  -o " + filename},
+		{"rolling", "stable", "amd64", "os2", "kernel2", "gadget2", 100, "sudo ubuntu-device-flash core rolling --channel stable --os os2 --kernel kernel2 --gadget gadget2 --developer-mode  -o " + filename},
+		{"17.10", "alpha", "arm", "os3", "kernel3", "gadget3", 56, "sudo ubuntu-device-flash core 17.10 --channel alpha --os os3 --kernel kernel3 --gadget gadget3 --developer-mode --oem beagleblack -o " + filename},
 	}
 
 	for _, item := range testCases {
@@ -123,6 +123,20 @@ func (s *imageSuite) TestCreateCallsUDF(c *check.C) {
 		c.Assert(len(s.cli.execCommandCalls) > 0, check.Equals, true)
 		c.Check(s.cli.execCommandCalls[item.expectedCall], check.Equals, 1)
 	}
+}
+
+func (s *imageSuite) TestCreateCallsUDFWithoutRevisionForNon1504(c *check.C) {
+	s.cli.output = tmpDirName
+	filename := tmpRawFileName()
+
+	expectedCall := fmt.Sprintf("sudo ubuntu-device-flash core %s --channel %s --os %s --kernel %s --gadget %s --developer-mode  -o "+filename,
+		s.defaultOptions.Release, s.defaultOptions.Channel, s.defaultOptions.OS, s.defaultOptions.Kernel, s.defaultOptions.Gadget)
+
+	_, err := s.subject.Create(s.defaultOptions, testDefaultVer)
+
+	c.Check(err, check.IsNil)
+	c.Assert(len(s.cli.execCommandCalls) > 0, check.Equals, true)
+	c.Check(s.cli.execCommandCalls[expectedCall], check.Equals, 1)
 }
 
 func (s *imageSuite) TestCreateCallsUDFWithoutAllSnapsParamsFor1504(c *check.C) {
@@ -160,8 +174,8 @@ func (s *imageSuite) TestCreateDoesNotCallUDFOnMktempError(c *check.C) {
 
 	s.subject.Create(s.defaultOptions, testDefaultVer)
 
-	expectedCall := fmt.Sprintf("sudo ubuntu-device-flash --revision=%d core %s --channel %s --os %s --kernel %s --gadget %s --developer-mode  -o %s",
-		100, testDefaultRelease, testDefaultChannel, testDefaultOS, testDefaultKernel, testDefaultGadget, filename)
+	expectedCall := fmt.Sprintf("sudo ubuntu-device-flash core %s --channel %s --os %s --kernel %s --gadget %s --developer-mode  -o %s",
+		testDefaultRelease, testDefaultChannel, testDefaultOS, testDefaultKernel, testDefaultGadget, filename)
 
 	c.Assert(s.cli.execCommandCalls[expectedCall], check.Equals, 0)
 }

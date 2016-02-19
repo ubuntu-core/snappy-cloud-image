@@ -81,14 +81,16 @@ func (r *Runner) Exec(options *flags.Options) (err error) {
 func (r *Runner) create(options *flags.Options) (err error) {
 	log.Infof("Checking current versions for release %s, channel %s and arch %s", options.Release, options.Channel, options.Arch)
 	var siVersion, cloudVersion int
-	siVersion, cloudVersion, err = r.getVersions(options)
-	if err != nil {
-		return
-	}
-	if siVersion <= cloudVersion {
-		return &ErrVersion{siVersion, cloudVersion}
-	}
 
+	if options.Release == "15.04" {
+		siVersion, cloudVersion, err = r.getVersions(options)
+		if err != nil {
+			return
+		}
+		if siVersion <= cloudVersion {
+			return &ErrVersion{siVersion, cloudVersion}
+		}
+	}
 	var path string
 	path, err = r.imgDriver.Create(options, siVersion)
 	defer os.Remove(path)
