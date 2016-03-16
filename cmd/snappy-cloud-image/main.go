@@ -29,6 +29,7 @@ import (
 	"github.com/ubuntu-core/snappy-cloud-image/pkg/runner"
 	"github.com/ubuntu-core/snappy-cloud-image/pkg/si"
 	"github.com/ubuntu-core/snappy-cloud-image/pkg/web"
+	"github.com/ubuntu-core/snappy/snappy"
 )
 
 func main() {
@@ -38,10 +39,11 @@ func main() {
 
 	cliExecutor := &cli.Executor{}
 	httpClient := &web.Client{}
+	repo := snappy.NewUbuntuStoreSnapRepository()
 
 	imgDataOrigin := si.NewClient(httpClient)
 	imgDataTarget := cloud.NewClient(cliExecutor)
-	imgDriver := image.NewUDFQcow2(cliExecutor)
+	imgDriver := image.NewUDFQcow2(cliExecutor, repo)
 
 	runner := runner.NewRunner(imgDataOrigin, imgDataTarget, imgDriver)
 	if err := runner.Exec(parsedFlags); err != nil {

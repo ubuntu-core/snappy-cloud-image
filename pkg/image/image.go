@@ -23,19 +23,26 @@
 package image
 
 import (
+	"fmt"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/ubuntu-core/snappy/progress"
+	"github.com/ubuntu-core/snappy/snappy"
 
 	"github.com/ubuntu-core/snappy-cloud-image/pkg/cli"
 	"github.com/ubuntu-core/snappy-cloud-image/pkg/flags"
 )
 
 const (
-	rawOutputFileName = "udf.raw"
-	outputFileName    = "udf.img"
+	rawOutputFileName   = "udf.raw"
+	outputFileName      = "udf.img"
+	errRepoDetailFmt    = "Could not get details of snap with name %s, developer %s and channel %s"
+	errRepoDetailLenFmt = "Did not get details of exactly one snap with name %s, developer %s and channel %s"
+	errRepoDownloadFmt  = "Could not download snap with name %s, developer %s and channel %s"
 )
 
 // Pollster holds the methods for querying an image backend
@@ -62,14 +69,48 @@ type Driver interface {
 	Create(options *flags.Options, ver int) (path string, err error)
 }
 
+type storeClient interface {
+	Download(*snappy.RemoteSnap, progress.Meter) (path string, err error)
+	Details(name, developer, channel string) (parts []snappy.Part, err error)
+}
+
+// ErrRepoDetail is the error returned when the repo fails to retrive details of a specific snap
+type ErrRepoDetail struct {
+	name, developer, channel string
+}
+
+func (e *ErrRepoDetail) Error() string {
+	return fmt.Sprintf(errRepoDetailFmt, e.name, e.developer, e.channel)
+}
+
+// ErrRepoDetailLen is the error returned when the repo doesn't return exactly one element when
+// the details of a snap are requested
+type ErrRepoDetailLen struct {
+	name, developer, channel string
+}
+
+func (e *ErrRepoDetailLen) Error() string {
+	return fmt.Sprintf(errRepoDetailLenFmt, e.name, e.developer, e.channel)
+}
+
+// ErrRepoDownload is the error returned when a snap could not be retrieved
+type ErrRepoDownload struct {
+	name, developer, channel string
+}
+
+func (e *ErrRepoDownload) Error() string {
+	return fmt.Sprintf(errRepoDownloadFmt, e.name, e.developer, e.channel)
+}
+
 // UDFQcow2 is a concrete implementation of Driver
 type UDFQcow2 struct {
 	cli cli.Commander
+	sc  storeClient
 }
 
 // NewUDFQcow2 is the UDFQcow2 constructor
-func NewUDFQcow2(cli cli.Commander) *UDFQcow2 {
-	return &UDFQcow2{cli: cli}
+func NewUDFQcow2(cli cli.Commander, sc storeClient) *UDFQcow2 {
+	return &UDFQcow2{cli: cli, sc: sc}
 }
 
 // Create makes the required call to UDF to create the raw image, and then transforms
@@ -95,11 +136,24 @@ func (u *UDFQcow2) Create(options *flags.Options, ver int) (path string, err err
 		"core", options.Release,
 		"--channel", options.Channel,
 	}...)
+	var osPath, kernelPath, gadgetPath string
 	if options.Release != "15.04" {
+		osPath, err = u.getSnapFile(options.OS, options.OSChannel)
+		if err != nil {
+			return "", err
+		}
+		kernelPath, err = u.getSnapFile(options.Kernel, options.KernelChannel)
+		if err != nil {
+			return "", err
+		}
+		gadgetPath, err = u.getSnapFile(options.Gadget, options.GadgetChannel)
+		if err != nil {
+			return "", err
+		}
 		cmds = append(cmds, []string{
-			"--os", options.OS,
-			"--kernel", options.Kernel,
-			"--gadget", options.Gadget,
+			"--os", osPath,
+			"--kernel", kernelPath,
+			"--gadget", gadgetPath,
 		}...)
 	}
 	cmds = append(cmds, []string{
@@ -109,6 +163,10 @@ func (u *UDFQcow2) Create(options *flags.Options, ver int) (path string, err err
 	log.Debug("Executing command ", strings.Join(cmds, " "))
 	output, err := u.cli.ExecCommand(cmds...)
 	log.Debug(output)
+
+	os.RemoveAll(osPath)
+	os.RemoveAll(kernelPath)
+	os.RemoveAll(gadgetPath)
 
 	if err != nil {
 		return
@@ -124,4 +182,22 @@ func (u *UDFQcow2) Create(options *flags.Options, ver int) (path string, err err
 	log.Debug(output)
 
 	return tmpFileName, err
+}
+
+func (u *UDFQcow2) getSnapFile(name, channel string) (path string, err error) {
+	snapParts, err := u.sc.Details(name, "", channel)
+	if err != nil {
+		return "", &ErrRepoDetail{name, "", channel}
+	}
+
+	if len(snapParts) != 1 {
+		return "", &ErrRepoDetailLen{name, "", channel}
+	}
+	log.Debugf("Downloading %s", name)
+	path, err = u.sc.Download(snapParts[0].(*snappy.RemoteSnap), nil)
+	if err != nil {
+		return "", &ErrRepoDownload{name, "", channel}
+	}
+	log.Debugf("Downloaded %s to %s", name, path)
+	return
 }

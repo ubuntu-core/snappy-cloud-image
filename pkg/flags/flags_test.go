@@ -109,6 +109,24 @@ func (s *flagsSuite) TestParseDefaultImageType(c *check.C) {
 	c.Assert(parsedFlags.ImageType, check.Equals, defaultImageType)
 }
 
+func (s *flagsSuite) TestParseDefaultOSChannel(c *check.C) {
+	parsedFlags := Parse()
+
+	c.Assert(parsedFlags.OSChannel, check.Equals, defaultOSChannel)
+}
+
+func (s *flagsSuite) TestParseDefaultGadgetChannel(c *check.C) {
+	parsedFlags := Parse()
+
+	c.Assert(parsedFlags.GadgetChannel, check.Equals, defaultGadgetChannel)
+}
+
+func (s *flagsSuite) TestParseDefaultKernelChannel(c *check.C) {
+	parsedFlags := Parse()
+
+	c.Assert(parsedFlags.KernelChannel, check.Equals, defaultKernelChannel)
+}
+
 func (s *flagsSuite) TestParseSetsActionToFlagValue(c *check.C) {
 	os.Args = []string{"", "-action", "myaction"}
 	parsedFlags := Parse()
@@ -195,6 +213,27 @@ func (s *flagsSuite) TestParseSetsImageTypeToFlagValue(c *check.C) {
 	parsedFlags := Parse()
 
 	c.Assert(parsedFlags.ImageType, check.Equals, "myimagetype")
+}
+
+func (s *flagsSuite) TestParseSetsOSChannelToFlagValue(c *check.C) {
+	os.Args = []string{"", "-os-channel", "myoschannel"}
+	parsedFlags := Parse()
+
+	c.Assert(parsedFlags.OSChannel, check.Equals, "myoschannel")
+}
+
+func (s *flagsSuite) TestParseSetsGadgetChannelToFlagValue(c *check.C) {
+	os.Args = []string{"", "-gadget-channel", "mygadgetchannel"}
+	parsedFlags := Parse()
+
+	c.Assert(parsedFlags.GadgetChannel, check.Equals, "mygadgetchannel")
+}
+
+func (s *flagsSuite) TestParseSetsKernelChannelToFlagValue(c *check.C) {
+	os.Args = []string{"", "-kernel-channel", "mykernelchannel"}
+	parsedFlags := Parse()
+
+	c.Assert(parsedFlags.KernelChannel, check.Equals, "mykernelchannel")
 }
 
 // from flag.ResetForTesting

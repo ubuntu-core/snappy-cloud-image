@@ -19,6 +19,7 @@ Architecture: any
 Depends: ${misc:Depends},
          python-openstackclient,
          ubuntu-device-flash,
+         ubuntu-snapppy-cli,
 Description: utility to create and maintain snappy cloud images
  It uses ubuntu-device-flash to create the images, then upload
  it to the externally configured cloud (currently supports only
