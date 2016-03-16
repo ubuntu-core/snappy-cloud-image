@@ -38,11 +38,10 @@ import (
 )
 
 const (
-	rawOutputFileName   = "udf.raw"
-	outputFileName      = "udf.img"
-	errRepoDetailFmt    = "Could not get details of snap with name %s, developer %s and channel %s"
-	errRepoDetailLenFmt = "Did not get details of exactly one snap with name %s, developer %s and channel %s"
-	errRepoDownloadFmt  = "Could not download snap with name %s, developer %s and channel %s"
+	rawOutputFileName  = "udf.raw"
+	outputFileName     = "udf.img"
+	errRepoDetailFmt   = "Could not get details of snap with name %s, developer %s and channel %s"
+	errRepoDownloadFmt = "Could not download snap with name %s, developer %s and channel %s"
 )
 
 // Pollster holds the methods for querying an image backend
@@ -71,7 +70,7 @@ type Driver interface {
 
 type storeClient interface {
 	Download(*snappy.RemoteSnap, progress.Meter) (path string, err error)
-	Details(name, developer, channel string) (parts []snappy.Part, err error)
+	Snap(name, channel string) (r *snappy.RemoteSnap, err error)
 }
 
 // ErrRepoDetail is the error returned when the repo fails to retrive details of a specific snap
@@ -81,16 +80,6 @@ type ErrRepoDetail struct {
 
 func (e *ErrRepoDetail) Error() string {
 	return fmt.Sprintf(errRepoDetailFmt, e.name, e.developer, e.channel)
-}
-
-// ErrRepoDetailLen is the error returned when the repo doesn't return exactly one element when
-// the details of a snap are requested
-type ErrRepoDetailLen struct {
-	name, developer, channel string
-}
-
-func (e *ErrRepoDetailLen) Error() string {
-	return fmt.Sprintf(errRepoDetailLenFmt, e.name, e.developer, e.channel)
 }
 
 // ErrRepoDownload is the error returned when a snap could not be retrieved
@@ -185,16 +174,13 @@ func (u *UDFQcow2) Create(options *flags.Options, ver int) (path string, err err
 }
 
 func (u *UDFQcow2) getSnapFile(name, channel string) (path string, err error) {
-	snapParts, err := u.sc.Details(name, "", channel)
+	remoteSnap, err := u.sc.Snap(name, channel)
 	if err != nil {
 		return "", &ErrRepoDetail{name, "", channel}
 	}
 
-	if len(snapParts) != 1 {
-		return "", &ErrRepoDetailLen{name, "", channel}
-	}
 	log.Debugf("Downloading %s", name)
-	path, err = u.sc.Download(snapParts[0].(*snappy.RemoteSnap), nil)
+	path, err = u.sc.Download(remoteSnap, nil)
 	if err != nil {
 		return "", &ErrRepoDownload{name, "", channel}
 	}

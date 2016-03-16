@@ -84,11 +84,10 @@ func (f *fakeCliCommander) ExecCommand(cmds ...string) (output string, err error
 }
 
 type fakeStoreClient struct {
-	detailCalls                              map[string]int
+	snapCalls                                map[string]int
 	downloadCalls                            map[string]int
-	totalDetailCalls, correctDetailCalls     int
-	detailErr                                bool
-	detailLenErr                             bool
+	totalSnapCalls, correctSnapCalls         int
+	snapErr                                  bool
 	totalDownloadCalls, correctDownloadCalls int
 	downloadErr                              bool
 }
@@ -105,24 +104,18 @@ func (f *fakeStoreClient) Download(remoteSnap *snappy.RemoteSnap, pb progress.Me
 	return getSnapFilename(remoteSnap.Name(), remoteSnap.Channel()), nil
 }
 
-func (f *fakeStoreClient) Details(name, developer, channel string) (parts []snappy.Part, err error) {
-	f.detailCalls[getDetailCall(name, developer, channel)]++
+func (f *fakeStoreClient) Snap(name, channel string) (remoteSnap *snappy.RemoteSnap, err error) {
+	f.snapCalls[getSnapCall(name, channel)]++
 
-	f.totalDetailCalls++
+	f.totalSnapCalls++
 
-	if f.detailErr {
-		if f.totalDetailCalls > f.correctDetailCalls {
+	if f.snapErr {
+		if f.totalSnapCalls > f.correctSnapCalls {
 			return nil, errors.New("")
 		}
 	}
-	if f.detailLenErr {
-		if f.totalDetailCalls > f.correctDetailCalls {
-			// return any number of elements different than one in this case
-			return []snappy.Part{nil, nil}, nil
-		}
-	}
 
-	return []snappy.Part{snappy.NewRemoteSnap(remote.Snap{Name: name, Channel: channel})}, nil
+	return snappy.NewRemoteSnap(remote.Snap{Name: name, Channel: channel}), nil
 }
 
 func (s *imageSuite) SetUpSuite(c *check.C) {
@@ -149,12 +142,11 @@ func (s *imageSuite) SetUpTest(c *check.C) {
 	s.cli.correctCalls = 0
 	s.cli.totalCalls = 0
 	s.cli.output = ""
-	s.storeClient.detailCalls = make(map[string]int)
+	s.storeClient.snapCalls = make(map[string]int)
 	s.storeClient.downloadCalls = make(map[string]int)
-	s.storeClient.detailErr = false
-	s.storeClient.detailLenErr = false
-	s.storeClient.correctDetailCalls = 0
-	s.storeClient.totalDetailCalls = 0
+	s.storeClient.snapErr = false
+	s.storeClient.correctSnapCalls = 0
+	s.storeClient.totalSnapCalls = 0
 	s.storeClient.downloadErr = false
 	s.storeClient.correctDownloadCalls = 0
 	s.storeClient.totalDownloadCalls = 0
@@ -299,11 +291,11 @@ func (s *imageSuite) TestCreateDoesNotTransformToQCOW2OnUDFError(c *check.C) {
 	c.Assert(s.cli.execCommandCalls[expectedCall], check.Equals, 0)
 }
 
-func (s *imageSuite) TestCreateCallsStoreDetailsForEachSnap(c *check.C) {
+func (s *imageSuite) TestCreateCallsStoreSnapForEachSnap(c *check.C) {
 	s.subject.Create(s.defaultOptions, testDefaultVer)
 
 	for i := 0; i < len(testSnaps); i++ {
-		c.Check(s.storeClient.detailCalls[getDetailCall(testSnaps[i], "", testChannels[i])],
+		c.Check(s.storeClient.snapCalls[getSnapCall(testSnaps[i], testChannels[i])],
 			check.Equals, 1)
 	}
 }
@@ -317,33 +309,18 @@ func (s *imageSuite) TestCreateCallsStoreDownloadForEachSnap(c *check.C) {
 	}
 }
 
-func (s *imageSuite) TestCreateReturnsStoreDetailsErrorForEachSnap(c *check.C) {
-	s.storeClient.detailErr = true
+func (s *imageSuite) TestCreateReturnsStoreSnapErrorForEachSnap(c *check.C) {
+	s.storeClient.snapErr = true
 
 	for i := 0; i < len(testSnaps); i++ {
-		s.storeClient.totalDetailCalls = 0
-		s.storeClient.correctDetailCalls = i
+		s.storeClient.totalSnapCalls = 0
+		s.storeClient.correctSnapCalls = i
 
 		_, err := s.subject.Create(s.defaultOptions, testDefaultVer)
 
 		c.Assert(err, check.NotNil)
 		c.Check(err, check.FitsTypeOf, &ErrRepoDetail{})
 		c.Check(err.Error(), check.Equals, fmt.Sprintf(errRepoDetailFmt, testSnaps[i], "", testChannels[i]))
-	}
-}
-
-func (s *imageSuite) TestCreateReturnsStoreDetailsLenErrorForEachSnap(c *check.C) {
-	s.storeClient.detailLenErr = true
-
-	for i := 0; i < len(testSnaps); i++ {
-		s.storeClient.totalDetailCalls = 0
-		s.storeClient.correctDetailCalls = i
-
-		_, err := s.subject.Create(s.defaultOptions, testDefaultVer)
-
-		c.Assert(err, check.NotNil)
-		c.Check(err, check.FitsTypeOf, &ErrRepoDetailLen{})
-		c.Check(err.Error(), check.Equals, fmt.Sprintf(errRepoDetailLenFmt, testSnaps[i], "", testChannels[i]))
 	}
 }
 
@@ -383,8 +360,8 @@ func getExpectedCall(compat, inputFile, outputFile string) string {
 		compat, inputFile, outputFile)
 }
 
-func getDetailCall(name, developer, channel string) string {
-	return fmt.Sprintf("%s - %s - %s", name, developer, channel)
+func getSnapCall(name, channel string) string {
+	return fmt.Sprintf("%s - %s", name, channel)
 }
 
 func getSnapFilename(name, channel string) string {
