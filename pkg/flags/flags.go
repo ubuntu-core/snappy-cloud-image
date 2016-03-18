@@ -27,7 +27,7 @@ import (
 
 // Options has fields for the existing flags
 type Options struct {
-	Action, Release, Channel,
+	Action, Release,
 	Arch, LogLevel, Qcow2compat,
 	OS, Kernel, Gadget, ImageType,
 	OSChannel, GadgetChannel, KernelChannel string
@@ -36,7 +36,6 @@ type Options struct {
 const (
 	defaultAction        = "create"
 	defaultRelease       = "rolling"
-	defaultChannel       = "edge"
 	defaultArch          = "amd64"
 	defaultLogLevel      = "info"
 	defaultQcow2compat   = "1.1"
@@ -54,7 +53,6 @@ func Parse() *Options {
 	var (
 		action      = flag.String("action", defaultAction, "action to be performed")
 		release     = flag.String("release", defaultRelease, "release of the image to be created")
-		channel     = flag.String("channel", defaultChannel, "channel of the image to be created")
 		arch        = flag.String("arch", defaultArch, "arch of the image to be created")
 		logLevel    = flag.String("loglevel", defaultLogLevel, "Level of the log putput, one of debug, info, warning, error, fatal, panic")
 		qcow2compat = flag.String("qcow2compat", defaultQcow2compat, "Qcow2 compatibility level (0.10 or 1.1)")
@@ -78,7 +76,6 @@ func Parse() *Options {
 	return &Options{
 		Action:        *action,
 		Release:       dotRelease,
-		Channel:       *channel,
 		Arch:          *arch,
 		LogLevel:      *logLevel,
 		Qcow2compat:   *qcow2compat,

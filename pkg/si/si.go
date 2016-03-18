@@ -100,5 +100,5 @@ func generateURL(options *flags.Options) string {
 		options.Arch += "hf"
 	}
 	return fmt.Sprintf("%s/%s/%s/generic_%s/%s",
-		baseURL, options.Release, options.Channel, options.Arch, dataFileName)
+		baseURL, options.Release, options.OSChannel, options.Arch, dataFileName)
 }

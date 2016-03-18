@@ -166,7 +166,12 @@ func (s *runnerCreateSuite) SetUpSuite(c *check.C) {
 	s.udfDriver = &fakeImgDriver{}
 	s.subject = NewRunner(s.siClient, s.cloudClient, s.udfDriver)
 	s.options = &flags.Options{
-		Action: "create", Release: "15.04", Channel: "edge", Arch: "amd64"}
+		Action:        "create",
+		Release:       "15.04",
+		OSChannel:     "edge",
+		KernelChannel: "edge",
+		GadgetChannel: "edge",
+		Arch:          "amd64"}
 }
 
 func (s *runnerCreateSuite) SetUpTest(c *check.C) {
@@ -190,7 +195,12 @@ func (s *runnerCleanupSuite) SetUpSuite(c *check.C) {
 	s.cloudClient = &fakeCloudClient{}
 	s.subject = NewRunner(&fakeSiClient{}, s.cloudClient, &fakeImgDriver{})
 	s.options = &flags.Options{
-		Action: "cleanup", Release: "15.04", Channel: "edge", Arch: "amd64"}
+		Action:        "cleanup",
+		Release:       "15.04",
+		OSChannel:     "edge",
+		KernelChannel: "edge",
+		GadgetChannel: "edge",
+		Arch:          "amd64"}
 }
 
 func (s *runnerCleanupSuite) SetUpTest(c *check.C) {
@@ -206,7 +216,12 @@ func (s *runnerPurgeSuite) SetUpSuite(c *check.C) {
 	s.cloudClient = &fakeCloudClient{}
 	s.subject = NewRunner(&fakeSiClient{}, s.cloudClient, &fakeImgDriver{})
 	s.options = &flags.Options{
-		Action: "purge", Release: "15.04", Channel: "edge", Arch: "amd64"}
+		Action:        "purge",
+		Release:       "15.04",
+		OSChannel:     "edge",
+		KernelChannel: "edge",
+		GadgetChannel: "edge",
+		Arch:          "amd64"}
 }
 
 func (s *runnerPurgeSuite) SetUpTest(c *check.C) {
@@ -523,7 +538,7 @@ func (s *runnerPurgeSuite) TestExecReturnsPurgeError(c *check.C) {
 }
 
 func getFakeKey(options *flags.Options) string {
-	return fmt.Sprintf("%s - %s - %s", options.Release, options.Channel, options.Arch)
+	return fmt.Sprintf("%s - %s - %s", options.Release, options.OSChannel, options.Arch)
 }
 
 func getCreateKey(options *flags.Options, ver int) string {

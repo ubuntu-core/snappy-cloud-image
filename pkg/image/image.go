@@ -123,28 +123,21 @@ func (u *UDFQcow2) Create(options *flags.Options, ver int) (path string, err err
 	}
 	cmds = append(cmds, []string{
 		"core", options.Release,
-		"--channel", options.Channel,
 	}...)
-	var osPath, kernelPath, gadgetPath string
-	if options.Release != "15.04" {
-		osPath, err = u.getSnapFile(options.OS, options.OSChannel)
-		if err != nil {
-			return "", err
-		}
-		kernelPath, err = u.getSnapFile(options.Kernel, options.KernelChannel)
-		if err != nil {
-			return "", err
-		}
-		gadgetPath, err = u.getSnapFile(options.Gadget, options.GadgetChannel)
-		if err != nil {
-			return "", err
-		}
-		cmds = append(cmds, []string{
-			"--os", osPath,
-			"--kernel", kernelPath,
-			"--gadget", gadgetPath,
-		}...)
+
+	snapFlags, err := u.getSnapFlags(options)
+	if err != nil {
+		return
 	}
+	cmds = append(cmds,
+		snapFlags...,
+	)
+	defer func() {
+		for _, item := range snapFlags {
+			os.RemoveAll(item)
+		}
+	}()
+
 	cmds = append(cmds, []string{
 		"--developer-mode",
 		archFlag, "-o", rawTmpFileName}...)
@@ -152,11 +145,6 @@ func (u *UDFQcow2) Create(options *flags.Options, ver int) (path string, err err
 	log.Debug("Executing command ", strings.Join(cmds, " "))
 	output, err := u.cli.ExecCommand(cmds...)
 	log.Debug(output)
-
-	os.RemoveAll(osPath)
-	os.RemoveAll(kernelPath)
-	os.RemoveAll(gadgetPath)
-
 	if err != nil {
 		return
 	}
@@ -186,4 +174,45 @@ func (u *UDFQcow2) getSnapFile(name, channel string) (path string, err error) {
 	}
 	log.Debugf("Downloaded %s to %s", name, path)
 	return
+}
+
+func (u *UDFQcow2) getSnapFlags(options *flags.Options) ([]string, error) {
+	channel := GetChannel(options.OSChannel, options.KernelChannel, options.GadgetChannel)
+
+	output := []string{
+		"--channel", channel,
+	}
+	if options.Release != "15.04" {
+		var err error
+		paths := []string{}
+		snaps := []string{options.OS, options.Kernel, options.Gadget}
+		channels := []string{options.OSChannel, options.KernelChannel, options.GadgetChannel}
+		for i := 0; i < len(snaps); i++ {
+			var path string
+			if channels[i] != channel {
+				path, err = u.getSnapFile(snaps[i], channels[i])
+				if err != nil {
+					return nil, err
+				}
+			} else {
+				path = snaps[i]
+			}
+			paths = append(paths, path)
+		}
+		output = append(output, []string{
+			"--os", paths[0],
+			"--kernel", paths[1],
+			"--gadget", paths[2],
+		}...)
+	}
+	return output, nil
+}
+
+// GetChannel returns the most frequent channel, if all are different it returns
+// osChannel
+func GetChannel(osChannel, kernelChannel, gadgetChannel string) string {
+	if kernelChannel == gadgetChannel {
+		return kernelChannel
+	}
+	return osChannel
 }

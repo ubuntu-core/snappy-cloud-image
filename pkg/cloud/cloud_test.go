@@ -88,10 +88,12 @@ func (s *cloudSuite) SetUpSuite(c *check.C) {
 
 func (s *cloudSuite) SetUpTest(c *check.C) {
 	s.defaultOptions = &flags.Options{
-		Release:   testDefaultRelease,
-		Channel:   testDefaultChannel,
-		Arch:      testDefaultArch,
-		ImageType: testDefaultImageType,
+		Release:       testDefaultRelease,
+		OSChannel:     testDefaultChannel,
+		KernelChannel: testDefaultChannel,
+		GadgetChannel: testDefaultChannel,
+		Arch:          testDefaultArch,
+		ImageType:     testDefaultImageType,
 	}
 	s.cli.execCommandCalls = make(map[string]int)
 	s.cli.output = fmt.Sprintf(baseResponse, getImageID(s.defaultOptions, testImageVersion))
@@ -209,7 +211,7 @@ func (s *cloudSuite) TestGetImageID(c *check.C) {
 		{"custom", "15.04", "alpha", "amd64", 2105, "ubuntu-core/custom/ubuntu-1504-snappy-core-amd64-alpha-2105-disk1.img"},
 	}
 	for _, item := range testCases {
-		options := &flags.Options{Release: item.release, Channel: item.channel, Arch: item.arch, ImageType: item.imageType}
+		options := &flags.Options{Release: item.release, OSChannel: item.channel, KernelChannel: item.channel, GadgetChannel: item.channel, Arch: item.arch, ImageType: item.imageType}
 		c.Check(GetImageID(options, item.version), check.Equals, item.expectedID)
 	}
 }
@@ -337,11 +339,15 @@ func (s *cloudSuite) TestPurgeCallsCliForDeleting(c *check.C) {
 	versionLine := fmt.Sprintf(baseResponse, getImageID(s.defaultOptions, version))
 	versionID := getIDFromGlanceResponse(versionLine)
 	s.defaultOptions.Release = testDefaultRelease + "-plusOneRelease"
-	s.defaultOptions.Channel = testDefaultChannel + "-plusOneChannel"
+	s.defaultOptions.OSChannel = testDefaultChannel + "-plusOneChannel"
+	s.defaultOptions.KernelChannel = testDefaultChannel + "-plusOneChannel"
+	s.defaultOptions.GadgetChannel = testDefaultChannel + "-plusOneChannel"
 	versionPlusOneLine := fmt.Sprintf(baseResponse, getImageID(s.defaultOptions, version+1))
 	versionPlusOneID := getIDFromGlanceResponse(versionPlusOneLine)
 	s.defaultOptions.Release = testDefaultRelease + "-plusTwoRelease"
-	s.defaultOptions.Channel = testDefaultChannel + "-plusTwoChannel"
+	s.defaultOptions.OSChannel = testDefaultChannel + "-plusTwoChannel"
+	s.defaultOptions.KernelChannel = testDefaultChannel + "-plusTwoChannel"
+	s.defaultOptions.GadgetChannel = testDefaultChannel + "-plusTwoChannel"
 	versionPlusTwoLine := fmt.Sprintf(baseResponse, getImageID(s.defaultOptions, version+2))
 	versionPlusTwoID := getIDFromGlanceResponse(versionPlusTwoLine)
 
@@ -423,7 +429,7 @@ func testEq(a, b []string) bool {
 
 func getImageID(options *flags.Options, ver int) string {
 	return fmt.Sprintf("ubuntu-core/%s/ubuntu-%s-snappy-core-%s-%s-%d-disk1.img",
-		options.ImageType, options.Release, options.Arch, options.Channel, ver)
+		options.ImageType, options.Release, options.Arch, options.OSChannel, ver)
 }
 
 func getVersionFromImageID(imageID string) string {

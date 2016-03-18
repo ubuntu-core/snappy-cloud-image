@@ -61,12 +61,6 @@ func (s *flagsSuite) TestParseDefaultRelease(c *check.C) {
 	c.Assert(parsedFlags.Release, check.Equals, defaultRelease)
 }
 
-func (s *flagsSuite) TestParseDefaultChannel(c *check.C) {
-	parsedFlags := Parse()
-
-	c.Assert(parsedFlags.Channel, check.Equals, defaultChannel)
-}
-
 func (s *flagsSuite) TestParseDefaultArch(c *check.C) {
 	parsedFlags := Parse()
 
@@ -157,13 +151,6 @@ func (s *flagsSuite) TestParseSetsReleaseToFlagValueNotAddingDotsForLongNumbers(
 	os.Args = []string{"", "-release", "12345"}
 	parsedFlags := Parse()
 	c.Assert(parsedFlags.Release, check.Equals, "12345")
-}
-
-func (s *flagsSuite) TestParseSetsChannelToFlagValue(c *check.C) {
-	os.Args = []string{"", "-channel", "mychannel"}
-	parsedFlags := Parse()
-
-	c.Assert(parsedFlags.Channel, check.Equals, "mychannel")
 }
 
 func (s *flagsSuite) TestParseSetsArchToFlagValue(c *check.C) {
