@@ -79,7 +79,8 @@ func (r *Runner) Exec(options *flags.Options) (err error) {
 }
 
 func (r *Runner) create(options *flags.Options) (err error) {
-	log.Infof("Checking current versions for release %s, channel %s and arch %s", options.Release, options.Channel, options.Arch)
+	log.Infof("Checking current versions for release %s, os channel %s, kernel channel %s, gadget channel %s and arch %s",
+		options.Release, options.OSChannel, options.KernelChannel, options.GadgetChannel, options.Arch)
 	var siVersion, cloudVersion int
 
 	if options.Release == "15.04" {

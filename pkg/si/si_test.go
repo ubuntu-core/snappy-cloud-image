@@ -111,9 +111,9 @@ func (s *siSuite) SetUpTest(c *check.C) {
 	s.webGetter.error = false
 	s.webGetter.output = []byte(validJSONResponse)
 	s.defaultOptions = &flags.Options{
-		Release: testDefaultRelease,
-		Channel: testDefaultChannel,
-		Arch:    testDefaultArch,
+		Release:   testDefaultRelease,
+		OSChannel: testDefaultChannel,
+		Arch:      testDefaultArch,
 	}
 }
 
@@ -136,9 +136,9 @@ func (s *siSuite) TestGetLatestVersionQueriesTheRightUrl(c *check.C) {
 	}
 	for _, item := range testCases {
 		options := &flags.Options{
-			Release: item.release,
-			Channel: item.channel,
-			Arch:    item.arch,
+			Release:   item.release,
+			OSChannel: item.channel,
+			Arch:      item.arch,
 		}
 		_, err := s.subject.GetLatestVersion(options)
 

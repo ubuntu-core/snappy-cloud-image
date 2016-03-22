@@ -34,6 +34,7 @@ import (
 
 	"github.com/ubuntu-core/snappy-cloud-image/pkg/cli"
 	"github.com/ubuntu-core/snappy-cloud-image/pkg/flags"
+	"github.com/ubuntu-core/snappy-cloud-image/pkg/image"
 )
 
 const (
@@ -60,7 +61,8 @@ type ErrVersionNotFound struct{ release, channel, arch string }
 
 // NewErrVersionNotFound is th ErrVersionNotFound constructor
 func NewErrVersionNotFound(options *flags.Options) *ErrVersionNotFound {
-	return &ErrVersionNotFound{release: options.Release, channel: options.Channel, arch: options.Arch}
+	channel := image.GetChannel(options.OSChannel, options.KernelChannel, options.GadgetChannel)
+	return &ErrVersionNotFound{release: options.Release, channel: channel, arch: options.Arch}
 }
 
 func (e *ErrVersionNotFound) Error() string {
@@ -135,7 +137,8 @@ func (c *Client) getImageList(pattern string) (imagelist []string, err error) {
 }
 
 func imgTemplate(options *flags.Options) (pattern string) {
-	return fmt.Sprintf(imageNamePrefixPattern, options.ImageType, options.Release, options.Arch, options.Channel)
+	channel := image.GetChannel(options.OSChannel, options.KernelChannel, options.GadgetChannel)
+	return fmt.Sprintf(imageNamePrefixPattern, options.ImageType, options.Release, options.Arch, channel)
 }
 
 // Returns the version contained in imageID, which is of the form:

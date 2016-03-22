@@ -23,19 +23,25 @@
 package image
 
 import (
+	"fmt"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/ubuntu-core/snappy/progress"
+	"github.com/ubuntu-core/snappy/snappy"
 
 	"github.com/ubuntu-core/snappy-cloud-image/pkg/cli"
 	"github.com/ubuntu-core/snappy-cloud-image/pkg/flags"
 )
 
 const (
-	rawOutputFileName = "udf.raw"
-	outputFileName    = "udf.img"
+	rawOutputFileName  = "udf.raw"
+	outputFileName     = "udf.img"
+	errRepoDetailFmt   = "Could not get details of snap with name %s, developer %s and channel %s"
+	errRepoDownloadFmt = "Could not download snap with name %s, developer %s and channel %s"
 )
 
 // Pollster holds the methods for querying an image backend
@@ -62,14 +68,38 @@ type Driver interface {
 	Create(options *flags.Options, ver int) (path string, err error)
 }
 
+type storeClient interface {
+	Download(*snappy.RemoteSnap, progress.Meter) (path string, err error)
+	Snap(name, channel string) (r *snappy.RemoteSnap, err error)
+}
+
+// ErrRepoDetail is the error returned when the repo fails to retrive details of a specific snap
+type ErrRepoDetail struct {
+	name, developer, channel string
+}
+
+func (e *ErrRepoDetail) Error() string {
+	return fmt.Sprintf(errRepoDetailFmt, e.name, e.developer, e.channel)
+}
+
+// ErrRepoDownload is the error returned when a snap could not be retrieved
+type ErrRepoDownload struct {
+	name, developer, channel string
+}
+
+func (e *ErrRepoDownload) Error() string {
+	return fmt.Sprintf(errRepoDownloadFmt, e.name, e.developer, e.channel)
+}
+
 // UDFQcow2 is a concrete implementation of Driver
 type UDFQcow2 struct {
 	cli cli.Commander
+	sc  storeClient
 }
 
 // NewUDFQcow2 is the UDFQcow2 constructor
-func NewUDFQcow2(cli cli.Commander) *UDFQcow2 {
-	return &UDFQcow2{cli: cli}
+func NewUDFQcow2(cli cli.Commander, sc storeClient) *UDFQcow2 {
+	return &UDFQcow2{cli: cli, sc: sc}
 }
 
 // Create makes the required call to UDF to create the raw image, and then transforms
@@ -93,15 +123,21 @@ func (u *UDFQcow2) Create(options *flags.Options, ver int) (path string, err err
 	}
 	cmds = append(cmds, []string{
 		"core", options.Release,
-		"--channel", options.Channel,
 	}...)
-	if options.Release != "15.04" {
-		cmds = append(cmds, []string{
-			"--os", options.OS,
-			"--kernel", options.Kernel,
-			"--gadget", options.Gadget,
-		}...)
+
+	snapFlags, err := u.getSnapFlags(options)
+	if err != nil {
+		return
 	}
+	cmds = append(cmds,
+		snapFlags...,
+	)
+	defer func() {
+		for _, item := range snapFlags {
+			os.RemoveAll(item)
+		}
+	}()
+
 	cmds = append(cmds, []string{
 		"--developer-mode",
 		archFlag, "-o", rawTmpFileName}...)
@@ -109,7 +145,6 @@ func (u *UDFQcow2) Create(options *flags.Options, ver int) (path string, err err
 	log.Debug("Executing command ", strings.Join(cmds, " "))
 	output, err := u.cli.ExecCommand(cmds...)
 	log.Debug(output)
-
 	if err != nil {
 		return
 	}
@@ -124,4 +159,60 @@ func (u *UDFQcow2) Create(options *flags.Options, ver int) (path string, err err
 	log.Debug(output)
 
 	return tmpFileName, err
+}
+
+func (u *UDFQcow2) getSnapFile(name, channel string) (path string, err error) {
+	remoteSnap, err := u.sc.Snap(name, channel)
+	if err != nil {
+		return "", &ErrRepoDetail{name, "", channel}
+	}
+
+	log.Debugf("Downloading %s", name)
+	path, err = u.sc.Download(remoteSnap, nil)
+	if err != nil {
+		return "", &ErrRepoDownload{name, "", channel}
+	}
+	log.Debugf("Downloaded %s to %s", name, path)
+	return
+}
+
+func (u *UDFQcow2) getSnapFlags(options *flags.Options) ([]string, error) {
+	channel := GetChannel(options.OSChannel, options.KernelChannel, options.GadgetChannel)
+
+	output := []string{
+		"--channel", channel,
+	}
+	if options.Release != "15.04" {
+		var err error
+		paths := []string{}
+		snaps := []string{options.OS, options.Kernel, options.Gadget}
+		channels := []string{options.OSChannel, options.KernelChannel, options.GadgetChannel}
+		for i := 0; i < len(snaps); i++ {
+			var path string
+			if channels[i] != channel {
+				path, err = u.getSnapFile(snaps[i], channels[i])
+				if err != nil {
+					return nil, err
+				}
+			} else {
+				path = snaps[i]
+			}
+			paths = append(paths, path)
+		}
+		output = append(output, []string{
+			"--os", paths[0],
+			"--kernel", paths[1],
+			"--gadget", paths[2],
+		}...)
+	}
+	return output, nil
+}
+
+// GetChannel returns the most frequent channel, if all are different it returns
+// osChannel
+func GetChannel(osChannel, kernelChannel, gadgetChannel string) string {
+	if kernelChannel == gadgetChannel {
+		return kernelChannel
+	}
+	return osChannel
 }
