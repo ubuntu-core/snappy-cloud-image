@@ -31,7 +31,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/ubuntu-core/snappy/progress"
-	"github.com/ubuntu-core/snappy/snappy"
+	"github.com/ubuntu-core/snappy/snap"
 
 	"github.com/ubuntu-core/snappy-cloud-image/pkg/cli"
 	"github.com/ubuntu-core/snappy-cloud-image/pkg/flags"
@@ -69,8 +69,8 @@ type Driver interface {
 }
 
 type storeClient interface {
-	Download(*snappy.RemoteSnap, progress.Meter) (path string, err error)
-	Snap(name, channel string) (r *snappy.RemoteSnap, err error)
+	Download(*snap.Info, progress.Meter) (path string, err error)
+	Snap(name, channel string) (r *snap.Info, err error)
 }
 
 // ErrRepoDetail is the error returned when the repo fails to retrive details of a specific snap
