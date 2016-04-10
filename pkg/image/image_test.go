@@ -27,8 +27,7 @@ import (
 	"testing"
 
 	"github.com/ubuntu-core/snappy/progress"
-	"github.com/ubuntu-core/snappy/snap/remote"
-	"github.com/ubuntu-core/snappy/snappy"
+	"github.com/ubuntu-core/snappy/snap"
 	"gopkg.in/check.v1"
 
 	"github.com/ubuntu-core/snappy-cloud-image/pkg/flags"
@@ -91,8 +90,8 @@ type fakeStoreClient struct {
 	downloadErr                              bool
 }
 
-func (f *fakeStoreClient) Download(remoteSnap *snappy.RemoteSnap, pb progress.Meter) (path string, err error) {
-	f.downloadCalls[getDownloadCall(remoteSnap.Name(), remoteSnap.Channel())]++
+func (f *fakeStoreClient) Download(remoteSnap *snap.Info, pb progress.Meter) (path string, err error) {
+	f.downloadCalls[getDownloadCall(remoteSnap.Name(), remoteSnap.Channel)]++
 	f.totalDownloadCalls++
 
 	if f.downloadErr {
@@ -100,10 +99,10 @@ func (f *fakeStoreClient) Download(remoteSnap *snappy.RemoteSnap, pb progress.Me
 			return "", errors.New("")
 		}
 	}
-	return getSnapFilename(remoteSnap.Name(), remoteSnap.Channel()), nil
+	return getSnapFilename(remoteSnap.Name(), remoteSnap.Channel), nil
 }
 
-func (f *fakeStoreClient) Snap(name, channel string) (remoteSnap *snappy.RemoteSnap, err error) {
+func (f *fakeStoreClient) Snap(name, channel string) (remoteSnap *snap.Info, err error) {
 	f.snapCalls[getSnapCall(name, channel)]++
 
 	f.totalSnapCalls++
@@ -114,7 +113,7 @@ func (f *fakeStoreClient) Snap(name, channel string) (remoteSnap *snappy.RemoteS
 		}
 	}
 
-	return snappy.NewRemoteSnap(remote.Snap{Name: name, Channel: channel}), nil
+	return &snap.Info{SideInfo: snap.SideInfo{OfficialName: name, Channel: channel}}, nil
 }
 
 func (s *imageSuite) SetUpSuite(c *check.C) {
