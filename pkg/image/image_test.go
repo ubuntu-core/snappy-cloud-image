@@ -28,6 +28,7 @@ import (
 
 	"github.com/ubuntu-core/snappy/progress"
 	"github.com/ubuntu-core/snappy/snap"
+	"github.com/ubuntu-core/snappy/store"
 	"gopkg.in/check.v1"
 
 	"github.com/ubuntu-core/snappy-cloud-image/pkg/flags"
@@ -90,7 +91,7 @@ type fakeStoreClient struct {
 	downloadErr                              bool
 }
 
-func (f *fakeStoreClient) Download(remoteSnap *snap.Info, pb progress.Meter) (path string, err error) {
+func (f *fakeStoreClient) Download(remoteSnap *snap.Info, pb progress.Meter, sa store.Authenticator) (path string, err error) {
 	f.downloadCalls[getDownloadCall(remoteSnap.Name(), remoteSnap.Channel)]++
 	f.totalDownloadCalls++
 
@@ -102,7 +103,7 @@ func (f *fakeStoreClient) Download(remoteSnap *snap.Info, pb progress.Meter) (pa
 	return getSnapFilename(remoteSnap.Name(), remoteSnap.Channel), nil
 }
 
-func (f *fakeStoreClient) Snap(name, channel string) (remoteSnap *snap.Info, err error) {
+func (f *fakeStoreClient) Snap(name, channel string, sa store.Authenticator) (remoteSnap *snap.Info, err error) {
 	f.snapCalls[getSnapCall(name, channel)]++
 
 	f.totalSnapCalls++
