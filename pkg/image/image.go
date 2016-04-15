@@ -32,6 +32,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/ubuntu-core/snappy/progress"
 	"github.com/ubuntu-core/snappy/snap"
+	"github.com/ubuntu-core/snappy/store"
 
 	"github.com/ubuntu-core/snappy-cloud-image/pkg/cli"
 	"github.com/ubuntu-core/snappy-cloud-image/pkg/flags"
@@ -69,8 +70,8 @@ type Driver interface {
 }
 
 type storeClient interface {
-	Download(*snap.Info, progress.Meter) (path string, err error)
-	Snap(name, channel string) (r *snap.Info, err error)
+	Download(*snap.Info, progress.Meter, store.Authenticator) (path string, err error)
+	Snap(name, channel string, sa store.Authenticator) (r *snap.Info, err error)
 }
 
 // ErrRepoDetail is the error returned when the repo fails to retrive details of a specific snap
@@ -162,13 +163,13 @@ func (u *UDFQcow2) Create(options *flags.Options, ver int) (path string, err err
 }
 
 func (u *UDFQcow2) getSnapFile(name, channel string) (path string, err error) {
-	remoteSnap, err := u.sc.Snap(name, channel)
+	remoteSnap, err := u.sc.Snap(name, channel, nil)
 	if err != nil {
 		return "", &ErrRepoDetail{name, "", channel}
 	}
 
 	log.Debugf("Downloading %s", name)
-	path, err = u.sc.Download(remoteSnap, nil)
+	path, err = u.sc.Download(remoteSnap, nil, nil)
 	if err != nil {
 		return "", &ErrRepoDownload{name, "", channel}
 	}
