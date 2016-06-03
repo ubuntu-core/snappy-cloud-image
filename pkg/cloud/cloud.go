@@ -90,7 +90,15 @@ func (c *Client) Create(path string, options *flags.Options, version int) (err e
 
 	log.Debugf("Creating image %s from file %s", imageID, path)
 
-	_, err = c.cli.ExecCommand("openstack", "image", "create", "--disk-format", "qcow2", "--file", path, imageID)
+	command := []string{"openstack", "image", "create", "--disk-format", "qcow2", "--file", path}
+	if options.Properties != "" {
+		for _, property := range strings.Split(options.Properties, ",") {
+			flag := []string{"--property", property}
+			command = append(command, flag...)
+		}
+	}
+	command = append(command, imageID)
+	_, err = c.cli.ExecCommand(command...)
 	return
 }
 

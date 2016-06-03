@@ -223,6 +223,20 @@ func (s *flagsSuite) TestParseSetsKernelChannelToFlagValue(c *check.C) {
 	c.Assert(parsedFlags.KernelChannel, check.Equals, "mykernelchannel")
 }
 
+func (s *flagsSuite) TestParseDefaultProperties(c *check.C) {
+	parsedFlags := Parse()
+
+	c.Assert(parsedFlags.Properties, check.Equals, defaultProperties)
+}
+
+func (s *flagsSuite) TestParseSetsPropertiesToFlagValue(c *check.C) {
+	testProperties := "property1=value1,property2=value2"
+	os.Args = []string{"", "-properties", testProperties}
+	parsedFlags := Parse()
+
+	c.Assert(parsedFlags.Properties, check.Equals, testProperties)
+}
+
 // from flag.ResetForTesting
 func resetFlag(usage func()) {
 	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ContinueOnError)

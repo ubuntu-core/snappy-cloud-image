@@ -187,6 +187,35 @@ func (s *cloudSuite) TestCreateCallsGlance(c *check.C) {
 	c.Assert(s.cli.execCommandCalls[expectedCall], check.Equals, 1)
 }
 
+func (s *cloudSuite) TestCreateWithOneProperty(c *check.C) {
+	testProperty := "testproperty='testvalue'"
+	s.defaultOptions.Properties = testProperty
+	path := "dummy"
+	err := s.subject.Create(path, s.defaultOptions, testImageVersion)
+
+	c.Assert(err, check.IsNil)
+
+	imageName := getImageID(s.defaultOptions, testImageVersion)
+	expectedCall := fmt.Sprintf("openstack image create --disk-format qcow2 --file %s --property %s %s",
+		path, testProperty, imageName)
+	c.Assert(s.cli.execCommandCalls[expectedCall], check.Equals, 1)
+}
+
+func (s *cloudSuite) TestCreateWithMultipleProperties(c *check.C) {
+	testProperty := "testproperty1='testvalue1',testproperty2='testvalue2',testproperty3='testvalue3'"
+	s.defaultOptions.Properties = testProperty
+	path := "dummy"
+	err := s.subject.Create(path, s.defaultOptions, testImageVersion)
+
+	c.Assert(err, check.IsNil)
+
+	expectedProperties := "--property testproperty1='testvalue1' --property testproperty2='testvalue2' --property testproperty3='testvalue3'"
+	imageName := getImageID(s.defaultOptions, testImageVersion)
+	expectedCall := fmt.Sprintf("openstack image create --disk-format qcow2 --file %s %s %s",	path, expectedProperties, imageName)
+	c.Assert(s.cli.execCommandCalls[expectedCall], check.Equals, 1)
+}
+
+
 func (s *cloudSuite) TestCreateReturnsError(c *check.C) {
 	s.cli.err = true
 

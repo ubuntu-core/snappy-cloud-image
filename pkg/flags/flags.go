@@ -30,7 +30,8 @@ type Options struct {
 	Action, Release,
 	Arch, LogLevel, Qcow2compat,
 	OS, Kernel, Gadget, ImageType,
-	OSChannel, GadgetChannel, KernelChannel string
+	OSChannel, GadgetChannel, KernelChannel,
+	Properties string
 }
 
 const (
@@ -46,6 +47,7 @@ const (
 	defaultOSChannel     = "edge"
 	defaultGadgetChannel = "edge"
 	defaultKernelChannel = "edge"
+	defaultProperties    = ""
 )
 
 // Parse analyzes the flags and returns a Options instance with the values
@@ -70,6 +72,7 @@ func Parse() *Options {
 			"Store channel to be used for the gadget snap.")
 		kernelChannel = flag.String("kernel-channel", defaultKernelChannel,
 			"Store channel to be used for the kernel snap.")
+		properties = flag.String("properties", defaultProperties, "Properties to use when uploading the image")
 	)
 	flag.Parse()
 	dotRelease := addDot(*release)
@@ -86,6 +89,7 @@ func Parse() *Options {
 		OSChannel:     *osChannel,
 		GadgetChannel: *gadgetChannel,
 		KernelChannel: *kernelChannel,
+		Properties:    *properties,
 	}
 }
 
