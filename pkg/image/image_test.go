@@ -26,9 +26,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ubuntu-core/snappy/progress"
-	"github.com/ubuntu-core/snappy/snap"
-	"github.com/ubuntu-core/snappy/store"
+	"github.com/snapcore/snapd/progress"
+	"github.com/snapcore/snapd/snap"
+	"github.com/snapcore/snapd/store"
 	"gopkg.in/check.v1"
 
 	"github.com/ubuntu-core/snappy-cloud-image/pkg/flags"
