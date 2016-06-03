@@ -1,7 +1,7 @@
 // -*- Mode: Go; indent-tabs-mode: t -*-
 
 /*
- * Copyright (C) 2015 Canonical Ltd
+ * Copyright (C) 2015, 2016 Canonical Ltd
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -22,6 +22,7 @@ package main
 import (
 	log "github.com/Sirupsen/logrus"
 
+	"github.com/snapcore/snapd/store"
 	"github.com/ubuntu-core/snappy-cloud-image/pkg/cli"
 	"github.com/ubuntu-core/snappy-cloud-image/pkg/cloud"
 	"github.com/ubuntu-core/snappy-cloud-image/pkg/flags"
@@ -29,7 +30,6 @@ import (
 	"github.com/ubuntu-core/snappy-cloud-image/pkg/runner"
 	"github.com/ubuntu-core/snappy-cloud-image/pkg/si"
 	"github.com/ubuntu-core/snappy-cloud-image/pkg/web"
-	"github.com/ubuntu-core/snappy/store"
 )
 
 func main() {
