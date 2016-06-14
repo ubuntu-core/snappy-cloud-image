@@ -103,7 +103,7 @@ func (s *cloudSuite) SetUpTest(c *check.C) {
 func (s *cloudSuite) TestGetLatestVersionQueriesGlance(c *check.C) {
 	s.subject.GetLatestVersion(s.defaultOptions)
 
-	c.Assert(s.cli.execCommandCalls["openstack image list --property status=active"], check.Equals, 1)
+	c.Assert(s.cli.execCommandCalls["openstack image list --private --property status=active"], check.Equals, 1)
 }
 
 func (s *cloudSuite) TestGetLatestVersionReturnsTheLatestVersion(c *check.C) {

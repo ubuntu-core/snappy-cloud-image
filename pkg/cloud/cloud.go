@@ -42,7 +42,7 @@ const (
 	imageNamePrefixPattern = baseImageName + "%s-snappy-core-%s-%s"
 	imageNameSufix         = "disk1.img"
 	errVerNotFoundPattern  = "Version not found for release %s, channel %s and arch %s"
-	imageListCmd           = "openstack image list --property status=active"
+	imageListCmd           = "openstack image list --private --property status=active"
 )
 
 // Client is the implementation of Clouder that interacts with the provider
